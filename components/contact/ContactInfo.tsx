@@ -5,6 +5,7 @@ const items = [
   { label: "Email", value: siteConfig.contact.email, href: `mailto:${siteConfig.contact.email}` },
   { label: "Phone", value: siteConfig.contact.phone, href: `tel:${siteConfig.contact.phone}` },
   { label: "Instagram", value: "@siknstylish", href: siteConfig.contact.instagram, external: true },
+  { label: "Studio", value: "Get Directions", href: siteConfig.address.mapsUrl, external: true },
 ];
 
 export default function ContactInfo() {
@@ -24,9 +25,6 @@ export default function ContactInfo() {
           <span className="text-ink text-lg">{item.value}</span>
         </a>
       ))}
-      <p className="text-ink/60 text-sm">
-        Studio based in {siteConfig.address.locality}, {siteConfig.address.country}.
-      </p>
     </div>
   );
 }

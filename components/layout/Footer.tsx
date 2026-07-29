@@ -77,9 +77,14 @@ export default function Footer() {
             >
               Instagram
             </a>
-            <span className="text-ivory/50">
+            <a
+              href={siteConfig.address.mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-ivory/50 hover:text-gold transition-colors w-fit"
+            >
               {siteConfig.address.locality}, {siteConfig.address.country}
-            </span>
+            </a>
           </div>
         </div>
       </Container>

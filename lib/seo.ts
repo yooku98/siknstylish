@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
-// PLACEHOLDER contact details — replace with real values before launch.
+// NOTE: siteConfig.url is still a placeholder domain — update once the site
+// has a real one, so canonical/OG URLs are correct.
 export const siteConfig = {
   name: "Sik n Stylish",
   shortName: "SiknStylish",
@@ -11,12 +12,13 @@ export const siteConfig = {
   address: {
     locality: "Accra",
     country: "Ghana",
+    mapsUrl: "https://maps.app.goo.gl/ErLkzhMesaFFseoq7",
   },
   contact: {
-    whatsapp: "https://wa.me/233000000000",
-    email: "hello@siknstylish.com",
-    phone: "+233000000000",
-    instagram: "https://instagram.com/siknstylish",
+    whatsapp: "https://wa.me/233242123525",
+    email: "siknstylish2025@gmail.com",
+    phone: "+233242123525",
+    instagram: "https://www.instagram.com/siknstylish/",
   },
 };
 
