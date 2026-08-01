@@ -19,6 +19,7 @@ export default function PortfolioPage() {
           eyebrow="Portfolio"
           title="Our Collections"
           description="Each collection reflects a category of craftsmanship, not a fixed catalogue — every client's piece is designed individually within it."
+          as="h1"
         />
         <PortfolioGrid />
       </Container>

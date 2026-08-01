@@ -19,6 +19,7 @@ export default function FaqPage() {
           eyebrow="FAQs"
           title="Frequently Asked Questions"
           align="left"
+          as="h1"
         />
         <FaqAccordion />
       </Container>

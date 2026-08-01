@@ -27,6 +27,7 @@ export default function PortalPage() {
           eyebrow="Client Portal"
           title="Coming Soon"
           description="We're building a dedicated space for returning clients. Soon you'll be able to:"
+          as="h1"
         />
         <ul className="flex flex-col gap-3 text-ink/70 text-base">
           {upcomingFeatures.map((feature) => (

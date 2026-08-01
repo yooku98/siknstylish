@@ -21,6 +21,7 @@ export default function ProcessPage() {
             eyebrow="Our Process"
             title="Seven Steps, From Idea to Garment"
             description="Bespoke fashion is a collaboration. Here's exactly what to expect once you reach out — no surprises, no guesswork."
+            as="h1"
           />
           <ProcessTimeline />
         </Container>
@@ -32,7 +33,7 @@ export default function ProcessPage() {
             Ready to Begin Your First Step?
           </h2>
           <Button href="/book" variant="onDark">
-            Book a Consultation
+            Start Your Custom Order
           </Button>
         </Container>
       </section>

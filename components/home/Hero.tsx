@@ -21,7 +21,7 @@ export default function Hero() {
           </p>
           <div className="flex flex-wrap gap-4 mt-2">
             <Button href="/book" variant="primary">
-              Book a Consultation
+              Start Your Custom Order
             </Button>
             <Button href="/portfolio" variant="outline">
               Explore Our Craftsmanship

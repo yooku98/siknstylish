@@ -23,6 +23,7 @@ export default function MeasurementsPage() {
             eyebrow="Measurements"
             title="Getting Measured, Your Way"
             description="Wherever you're based, there's a way to get accurately measured before we begin your piece."
+            as="h1"
           />
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {measurementOptions.map((option) => (
@@ -50,7 +51,7 @@ export default function MeasurementsPage() {
             Ready With Your Measurements?
           </h2>
           <Button href="/book" variant="primary">
-            Book a Consultation
+            Start Your Custom Order
           </Button>
         </Container>
       </section>

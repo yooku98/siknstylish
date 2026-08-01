@@ -52,7 +52,7 @@ export default function MobileNav() {
         </Link>
       </nav>
       <Button href="/book" variant="primary" onClick={() => setOpen(false)}>
-        Book a Consultation
+        Start Your Custom Order
       </Button>
     </div>
   );

@@ -51,7 +51,7 @@ export default function Header() {
             Client Login
           </Link>
           <Button href="/book" variant="primary" className="text-xs px-5 py-2.5">
-            Book a Consultation
+            Start Your Custom Order
           </Button>
         </div>
 

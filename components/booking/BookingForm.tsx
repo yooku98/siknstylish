@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { collections } from "@/lib/collections";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
@@ -51,6 +52,24 @@ export default function BookingForm() {
         <Field label="Full Name" name="name" required />
         <Field label="Email" name="email" type="email" required />
         <Field label="Phone / WhatsApp" name="phone" type="tel" required />
+        <div className="flex flex-col gap-2">
+          <label className="text-sm text-ink/70" htmlFor="garmentCategory">
+            Garment Category
+          </label>
+          <select
+            id="garmentCategory"
+            name="garmentCategory"
+            required
+            className="border border-ink/20 bg-ivory px-4 py-3 text-sm focus:outline-none focus:border-gold"
+          >
+            <option value="">Select a category</option>
+            {collections.map((c) => (
+              <option key={c.slug} value={c.name}>
+                {c.name} ({c.startingFrom})
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="flex flex-col gap-2">
           <label className="text-sm text-ink/70" htmlFor="consultationType">
             Consultation Type

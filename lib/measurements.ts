@@ -17,7 +17,7 @@ export const measurementOptions: MeasurementOption[] = [
   {
     title: "Submit Your Own Measurements",
     description:
-      "Based abroad or unable to visit? Follow our measurement guide below and submit your numbers when you book — we'll confirm anything that looks off before we cut fabric.",
+      "Based abroad or unable to visit? We'll send you a measurement guide to help — follow it, submit your numbers when you book, and we'll confirm anything that looks off before we cut fabric.",
   },
 ];
 
