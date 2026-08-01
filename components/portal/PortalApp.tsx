@@ -6,13 +6,13 @@ import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import Button from "@/components/ui/Button";
 import AuthForm from "@/components/portal/AuthForm";
+import MeasurementsForm from "@/components/portal/MeasurementsForm";
 
 const upcomingFeatures = [
   "View the progress of your order",
   "Approve sketches or fabric choices",
   "Upload inspiration photos",
   "Make payments",
-  "Access your saved measurements",
   "Review your previous orders",
 ];
 
@@ -56,19 +56,31 @@ export default function PortalApp() {
   }
 
   return (
-    <div className="flex flex-col gap-8 items-center text-center max-w-2xl mx-auto">
+    <div className="flex flex-col gap-12 items-center text-center max-w-2xl mx-auto w-full">
       <p className="text-ink/70 text-base">
         Welcome back{user.displayName ? `, ${user.displayName}` : ""}.
       </p>
-      <ul className="flex flex-col gap-3 text-ink/70 text-base">
-        {upcomingFeatures.map((feature) => (
-          <li key={feature}>{feature}</li>
-        ))}
-      </ul>
-      <p className="text-ink/60 text-sm">
-        We&apos;re still building these out. In the meantime, reach out
-        directly and we&apos;ll help with any of the above.
-      </p>
+
+      <div className="flex flex-col gap-6 w-full text-left">
+        <h2 className="font-serif text-2xl text-ink text-center">
+          Your Measurements
+        </h2>
+        <MeasurementsForm user={user} />
+      </div>
+
+      <div className="flex flex-col gap-4 items-center">
+        <h2 className="font-serif text-2xl text-ink">Coming Soon</h2>
+        <ul className="flex flex-col gap-3 text-ink/70 text-base">
+          {upcomingFeatures.map((feature) => (
+            <li key={feature}>{feature}</li>
+          ))}
+        </ul>
+        <p className="text-ink/60 text-sm">
+          We&apos;re still building these out. In the meantime, reach out
+          directly and we&apos;ll help with any of the above.
+        </p>
+      </div>
+
       <div className="flex flex-wrap gap-4 justify-center">
         <Button href="/contact" variant="primary">
           Contact Us
