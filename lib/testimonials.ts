@@ -1,6 +1,6 @@
-// All entries below are PLACEHOLDER content — no real client names, quotes or
-// photos exist yet. Replace every field with real testimonials (with client
-// permission) before this site goes live. Structure is real; words are not.
+// Entries marked "placeholder-*" below are PLACEHOLDER content — no real
+// client names, quotes or photos exist for them yet. Replace every field
+// with real testimonials (with client permission) before this site goes live.
 export type Testimonial = {
   id: string;
   quote: string;
@@ -10,11 +10,11 @@ export type Testimonial = {
 
 export const testimonials: Testimonial[] = [
   {
-    id: "placeholder-1",
+    id: "anna-custom-dress",
     quote:
-      "[PLACEHOLDER TESTIMONIAL — replace with a real client quote about their experience and the finished piece.]",
-    clientName: "[Client name]",
-    occasion: "[Occasion — e.g. Wedding, Gala]",
+      "From start to finish, the experience with Sik n Stylish was amazing. Great customer service, genuine support, and honesty every step of the way — my dress turned out beautifully. I couldn't be happier and I'm already looking forward to wearing it.",
+    clientName: "Anna",
+    occasion: "Custom Dress",
   },
   {
     id: "placeholder-2",
