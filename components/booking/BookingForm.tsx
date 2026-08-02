@@ -1,7 +1,9 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { collections } from "@/lib/collections";
+import { db } from "@/lib/firebase";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
@@ -19,8 +21,29 @@ export default function BookingForm() {
     }
 
     const formData = new FormData(e.currentTarget);
+    const bookingFields = {
+      name: String(formData.get("name") ?? ""),
+      email: String(formData.get("email") ?? ""),
+      phone: String(formData.get("phone") ?? ""),
+      garmentCategory: String(formData.get("garmentCategory") ?? ""),
+      consultationType: String(formData.get("consultationType") ?? ""),
+      preferredDate: String(formData.get("preferredDate") ?? ""),
+      preferredTime: String(formData.get("preferredTime") ?? ""),
+      notes: String(formData.get("notes") ?? ""),
+    };
+
     formData.append("access_key", accessKey);
     formData.append("subject", "New Consultation Booking Request — Sik n Stylish");
+
+    // Fire the Firestore write alongside the email, but never let it affect
+    // the visible success/error state -- the email stays the source of truth
+    // for whether the request "went through" from the client's point of
+    // view, this is just so staff also see it in /admin.
+    addDoc(collection(db, "bookingRequests"), {
+      ...bookingFields,
+      status: "new",
+      createdAt: serverTimestamp(),
+    }).catch(() => {});
 
     try {
       const res = await fetch("https://api.web3forms.com/submit", {

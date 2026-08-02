@@ -29,7 +29,13 @@ const inputClasses =
 
 type CreateStatus = "idle" | "submitting" | "error";
 
-function NewOrderForm() {
+function NewOrderForm({
+  defaultEmail,
+  defaultCollectionSlug,
+}: {
+  defaultEmail?: string;
+  defaultCollectionSlug?: string;
+}) {
   const [status, setStatus] = useState<CreateStatus>("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -100,6 +106,7 @@ function NewOrderForm() {
             name="clientEmail"
             type="email"
             required
+            defaultValue={defaultEmail}
             className={inputClasses}
           />
         </div>
@@ -111,7 +118,7 @@ function NewOrderForm() {
             id="collectionSlug"
             name="collectionSlug"
             required
-            defaultValue=""
+            defaultValue={defaultCollectionSlug || ""}
             className={inputClasses}
           >
             <option value="" disabled>
@@ -367,7 +374,11 @@ function OrderRow({ order }: { order: Order }) {
   );
 }
 
-export default function AdminOrders() {
+export default function AdminOrders({
+  prefill,
+}: {
+  prefill?: { email: string; collectionSlug: string } | null;
+}) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -390,7 +401,11 @@ export default function AdminOrders() {
 
   return (
     <div className="flex flex-col gap-8">
-      <NewOrderForm />
+      <NewOrderForm
+        key={prefill ? `${prefill.email}-${prefill.collectionSlug}` : "empty"}
+        defaultEmail={prefill?.email}
+        defaultCollectionSlug={prefill?.collectionSlug}
+      />
       <div className="flex flex-col gap-4">
         {loading && <p className="text-ink/60 text-sm">Loading orders...</p>}
         {error && <p className="text-sm text-red-700">{error}</p>}

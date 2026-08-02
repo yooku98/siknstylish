@@ -13,6 +13,26 @@ service cloud.firestore {
     function isOwner(uid) {
       return isSignedIn() && request.auth.uid == uid;
     }
+    // The booking form is public (no sign-in required, by design -- it's
+    // the pre-signup lead-capture step), so its writes can't be gated on
+    // request.auth. Validate shape/size instead so it can't be used to
+    // inject arbitrary fields or oversized junk into the collection.
+    function isValidBookingRequest(data) {
+      return data.keys().hasOnly([
+        'name', 'email', 'phone', 'garmentCategory', 'consultationType',
+        'preferredDate', 'preferredTime', 'notes', 'status', 'createdAt'
+      ]) &&
+      data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+      data.email is string && data.email.size() > 0 && data.email.size() < 200 &&
+      data.phone is string && data.phone.size() < 50 &&
+      data.garmentCategory is string && data.garmentCategory.size() < 100 &&
+      data.consultationType is string && data.consultationType.size() < 50 &&
+      data.preferredDate is string && data.preferredDate.size() < 50 &&
+      data.preferredTime is string && data.preferredTime.size() < 50 &&
+      data.notes is string && data.notes.size() < 2000 &&
+      data.status == 'new' &&
+      data.createdAt == request.time;
+    }
 
     match /users/{uid} {
       allow read, write: if isOwner(uid) || isStaff();
@@ -29,6 +49,11 @@ service cloud.firestore {
          request.resource.data.diff(resource.data).affectedKeys()
            .hasOnly(['inspirationNotes', 'fabricApproved', 'sketchApproved', 'inspirationPhotos']));
       allow delete: if isStaff();
+    }
+
+    match /bookingRequests/{requestId} {
+      allow read, update, delete: if isStaff();
+      allow create: if isValidBookingRequest(request.resource.data);
     }
 
     match /portfolioItems/{itemId} {
