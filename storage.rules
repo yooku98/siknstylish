@@ -1,3 +1,10 @@
+// Deploy note: `firebase deploy --only storage:rules` fails on this project
+// with "Could not find rules for the following storage targets: rules" --
+// a firebase-tools bug unrelated to permissions (firestore.rules deploys
+// fine via the same CLI). Deploy this file via the Firebase Rules REST API
+// instead: create a ruleset (POST .../rulesets) then release it to
+// firebase.storage/<bucket> (PATCH .../releases/firebase.storage%2F<bucket>).
+
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
