@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import {
   collection,
   query,
@@ -12,9 +12,11 @@ import {
   orderBy,
   onSnapshot,
   serverTimestamp,
+  arrayUnion,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { collections } from "@/lib/collections";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db, storage } from "@/lib/firebase";
+import { collections, getCollection } from "@/lib/collections";
 import {
   Order,
   OrderStatus,
@@ -65,9 +67,11 @@ function NewOrderForm() {
         depositPaid: 0,
         balanceDue: totalAmount,
         staffNotes: "",
+        sketches: [],
         sketchApproved: false,
         fabricApproved: false,
         inspirationNotes: "",
+        inspirationPhotos: [],
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -154,6 +158,8 @@ function OrderRow({ order }: { order: Order }) {
   const [saveState, setSaveState] = useState<"idle" | "saving">("idle");
   const [savedRecently, setSavedRecently] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [sketchUploading, setSketchUploading] = useState(false);
+  const [sketchError, setSketchError] = useState<string | null>(null);
 
   const dirty =
     status !== order.status ||
@@ -181,13 +187,40 @@ function OrderRow({ order }: { order: Order }) {
     }
   };
 
+  const handleSketchUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    setSketchUploading(true);
+    setSketchError(null);
+    try {
+      const storagePath = `orders/${order.id}/sketches/${Date.now()}-${file.name}`;
+      const storageRef = ref(storage, storagePath);
+      await uploadBytes(storageRef, file, {
+        customMetadata: { clientId: order.clientId },
+      });
+      const url = await getDownloadURL(storageRef);
+      await updateDoc(doc(db, "orders", order.id), {
+        sketches: arrayUnion({ url, storagePath }),
+        updatedAt: serverTimestamp(),
+      });
+    } catch {
+      setSketchError("Sketch upload failed — please try again.");
+    } finally {
+      setSketchUploading(false);
+    }
+  };
+
+  const collectionName = getCollection(order.collectionSlug)?.name ?? order.collectionSlug;
+
   return (
     <div className="border border-ink/10 p-6 flex flex-col gap-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
           <p className="text-ink font-medium">{order.clientEmail}</p>
           <p className="text-ink/50 text-xs uppercase tracking-wide">
-            {order.collectionSlug}
+            {collectionName}
           </p>
         </div>
         <div className="flex gap-4 text-xs text-ink/60">
@@ -201,6 +234,55 @@ function OrderRow({ order }: { order: Order }) {
           Client note: {order.inspirationNotes}
         </p>
       )}
+
+      <div className="flex flex-col gap-2">
+        <label className="text-xs text-ink/60 uppercase tracking-wide">
+          Sketches
+        </label>
+        <div className="flex flex-wrap gap-3">
+          {order.sketches?.map((sketch) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={sketch.storagePath}
+              src={sketch.url}
+              alt="Sketch"
+              className="w-20 h-20 object-cover border border-ink/10"
+            />
+          ))}
+          <label className="w-20 h-20 border border-dashed border-ink/30 flex items-center justify-center text-xs text-ink/50 cursor-pointer text-center px-1">
+            {sketchUploading ? "..." : "+ Add"}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleSketchUpload}
+              disabled={sketchUploading}
+              className="hidden"
+            />
+          </label>
+        </div>
+        {sketchError && <p className="text-xs text-red-700">{sketchError}</p>}
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label className="text-xs text-ink/60 uppercase tracking-wide">
+          Inspiration Photos
+        </label>
+        {order.inspirationPhotos?.length > 0 ? (
+          <div className="flex flex-wrap gap-3">
+            {order.inspirationPhotos.map((photo) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={photo.storagePath}
+                src={photo.url}
+                alt="Client inspiration"
+                className="w-20 h-20 object-cover border border-ink/10"
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-ink/50">No inspiration photos uploaded.</p>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="flex flex-col gap-2">
@@ -288,13 +370,21 @@ function OrderRow({ order }: { order: Order }) {
 export default function AdminOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
-    const unsubscribe = onSnapshot(q, (snap) => {
-      setOrders(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Order));
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snap) => {
+        setOrders(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Order));
+        setLoading(false);
+      },
+      () => {
+        setError("Couldn't load orders — please refresh the page.");
+        setLoading(false);
+      },
+    );
     return unsubscribe;
   }, []);
 
@@ -303,7 +393,8 @@ export default function AdminOrders() {
       <NewOrderForm />
       <div className="flex flex-col gap-4">
         {loading && <p className="text-ink/60 text-sm">Loading orders...</p>}
-        {!loading && orders.length === 0 && (
+        {error && <p className="text-sm text-red-700">{error}</p>}
+        {!loading && !error && orders.length === 0 && (
           <p className="text-ink/60 text-sm">No orders yet.</p>
         )}
         {orders.map((order) => (

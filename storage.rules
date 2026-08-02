@@ -1,0 +1,33 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isStaff() {
+      return isSignedIn() && request.auth.token.role == 'staff';
+    }
+    match /portfolio/{collectionSlug}/{fileName} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    // Ownership is tagged via customMetadata.clientId at upload time (set by
+    // the app), rather than a firestore.get() cross-service lookup -- that
+    // was tried first but the cross-service read doesn't transparently carry
+    // the client's own Firestore read permissions, so even the legitimate
+    // owner was denied.
+    match /orders/{orderId}/sketches/{fileName} {
+      allow read: if isStaff() ||
+        (isSignedIn() && resource.metadata.clientId == request.auth.uid);
+      allow write: if isStaff();
+    }
+
+    match /orders/{orderId}/inspiration/{fileName} {
+      allow read: if isStaff() ||
+        (isSignedIn() && resource.metadata.clientId == request.auth.uid);
+      allow write: if isStaff() ||
+        (isSignedIn() && request.resource.metadata.clientId == request.auth.uid);
+    }
+  }
+}

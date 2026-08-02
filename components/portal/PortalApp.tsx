@@ -7,14 +7,9 @@ import { auth, db } from "@/lib/firebase";
 import Button from "@/components/ui/Button";
 import AuthForm from "@/components/portal/AuthForm";
 import MeasurementsForm from "@/components/portal/MeasurementsForm";
+import OrdersPanel from "@/components/portal/OrdersPanel";
 
-const upcomingFeatures = [
-  "View the progress of your order",
-  "Approve sketches or fabric choices",
-  "Upload inspiration photos",
-  "Make payments",
-  "Review your previous orders",
-];
+const upcomingFeatures = ["Make payments"];
 
 async function ensureUserProfile(user: User) {
   const ref = doc(db, "users", user.uid);
@@ -63,6 +58,13 @@ export default function PortalApp() {
 
       <div className="flex flex-col gap-6 w-full text-left">
         <h2 className="font-serif text-2xl text-ink text-center">
+          Your Orders
+        </h2>
+        <OrdersPanel user={user} />
+      </div>
+
+      <div className="flex flex-col gap-6 w-full text-left">
+        <h2 className="font-serif text-2xl text-ink text-center">
           Your Measurements
         </h2>
         <MeasurementsForm user={user} />
@@ -76,8 +78,8 @@ export default function PortalApp() {
           ))}
         </ul>
         <p className="text-ink/60 text-sm">
-          We&apos;re still building these out. In the meantime, reach out
-          directly and we&apos;ll help with any of the above.
+          Paystack integration is pending account review. In the meantime,
+          reach out directly and we&apos;ll help with payments.
         </p>
       </div>
 

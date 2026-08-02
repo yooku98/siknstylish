@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // NOTE: Staff/admin accounts are distinguished by a custom claim role: "staff".
+    // This claim must be set via the Firebase Admin SDK (e.g. admin.auth().setCustomUserClaims)
+    // per staff account -- it is not configurable from the console. See scripts/set-staff-claim.mjs.
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isStaff() {
+      return isSignedIn() && request.auth.token.role == 'staff';
+    }
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    match /users/{uid} {
+      allow read, write: if isOwner(uid) || isStaff();
+      match /measurements/{docId} {
+        allow read, write: if isOwner(uid) || isStaff();
+      }
+    }
+
+    match /orders/{orderId} {
+      allow read: if isStaff() || (isSignedIn() && resource.data.clientId == request.auth.uid);
+      allow create: if isStaff();
+      allow update: if isStaff() ||
+        (isSignedIn() && resource.data.clientId == request.auth.uid &&
+         request.resource.data.diff(resource.data).affectedKeys()
+           .hasOnly(['inspirationNotes', 'fabricApproved', 'sketchApproved', 'inspirationPhotos']));
+      allow delete: if isStaff();
+    }
+
+    match /portfolioItems/{itemId} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    match /payments/{paymentId} {
+      allow read: if isStaff() || (isSignedIn() && resource.data.clientId == request.auth.uid);
+      allow write: if false;
+    }
+  }
+}

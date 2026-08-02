@@ -142,15 +142,23 @@ export default function AdminPortfolio() {
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     const q = query(collection(db, "portfolioItems"), orderBy("createdAt", "desc"));
-    const unsubscribe = onSnapshot(q, (snap) => {
-      setItems(
-        snap.docs.map((d) => ({ id: d.id, ...d.data() }) as PortfolioItem),
-      );
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snap) => {
+        setItems(
+          snap.docs.map((d) => ({ id: d.id, ...d.data() }) as PortfolioItem),
+        );
+        setLoading(false);
+      },
+      () => {
+        setLoadError("Couldn't load portfolio images — please refresh the page.");
+        setLoading(false);
+      },
+    );
     return unsubscribe;
   }, []);
 
@@ -171,9 +179,10 @@ export default function AdminPortfolio() {
     <div className="flex flex-col gap-8">
       <UploadForm />
       {deleteError && <p className="text-sm text-red-700">{deleteError}</p>}
+      {loadError && <p className="text-sm text-red-700">{loadError}</p>}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         {loading && <p className="text-ink/60 text-sm">Loading...</p>}
-        {!loading && items.length === 0 && (
+        {!loading && !loadError && items.length === 0 && (
           <p className="text-ink/60 text-sm col-span-full">
             No portfolio images uploaded yet.
           </p>

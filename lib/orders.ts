@@ -24,6 +24,11 @@ export const orderStatusLabels: Record<OrderStatus, string> = {
   delivered: "Delivered",
 };
 
+export type StoredImage = {
+  url: string;
+  storagePath: string;
+};
+
 export type Order = {
   id: string;
   clientId: string;
@@ -34,9 +39,11 @@ export type Order = {
   depositPaid: number;
   balanceDue: number;
   staffNotes: string;
+  sketches: StoredImage[];
   sketchApproved: boolean;
   fabricApproved: boolean;
   inspirationNotes: string;
+  inspirationPhotos: StoredImage[];
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 };
