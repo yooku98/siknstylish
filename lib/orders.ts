@@ -31,7 +31,9 @@ export type StoredImage = {
 
 export type Order = {
   id: string;
-  clientId: string;
+  // null until a portal account with a matching, verified email claims it --
+  // see AuthForm/PortalApp's auto-claim logic.
+  clientId: string | null;
   clientEmail: string;
   collectionSlug: string;
   status: OrderStatus;

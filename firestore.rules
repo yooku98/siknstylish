@@ -13,6 +13,18 @@ service cloud.firestore {
     function isOwner(uid) {
       return isSignedIn() && request.auth.uid == uid;
     }
+    // Lets a client claim an order staff created before they had a portal
+    // account (clientId left null, matched by email at creation time).
+    // Gated on email_verified so this can't be used to hijack someone
+    // else's order just by knowing their email and signing up first --
+    // Google sign-in is verified by Google automatically; email/password
+    // sign-ups get a verification email (see AuthForm).
+    function canClaimOrder(order) {
+      return isSignedIn() &&
+        request.auth.token.email_verified == true &&
+        order.clientId == null &&
+        order.clientEmail == request.auth.token.email;
+    }
     // The booking form is public (no sign-in required, by design -- it's
     // the pre-signup lead-capture step), so its writes can't be gated on
     // request.auth. Validate shape/size instead so it can't be used to
@@ -42,12 +54,17 @@ service cloud.firestore {
     }
 
     match /orders/{orderId} {
-      allow read: if isStaff() || (isSignedIn() && resource.data.clientId == request.auth.uid);
+      allow read: if isStaff() ||
+        (isSignedIn() && resource.data.clientId == request.auth.uid) ||
+        canClaimOrder(resource.data);
       allow create: if isStaff();
       allow update: if isStaff() ||
         (isSignedIn() && resource.data.clientId == request.auth.uid &&
          request.resource.data.diff(resource.data).affectedKeys()
-           .hasOnly(['inspirationNotes', 'fabricApproved', 'sketchApproved', 'inspirationPhotos']));
+           .hasOnly(['inspirationNotes', 'fabricApproved', 'sketchApproved', 'inspirationPhotos'])) ||
+        (canClaimOrder(resource.data) &&
+         request.resource.data.clientId == request.auth.uid &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clientId', 'updatedAt']));
       allow delete: if isStaff();
     }
 

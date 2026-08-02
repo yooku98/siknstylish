@@ -62,8 +62,10 @@ function OrderCard({ order }: { order: Order }) {
     try {
       const storagePath = `orders/${order.id}/inspiration/${Date.now()}-${file.name}`;
       const storageRef = ref(storage, storagePath);
+      // OrdersPanel only ever renders orders already claimed by this user
+      // (query is where clientId==user.uid), so this is never actually null.
       await uploadBytes(storageRef, file, {
-        customMetadata: { clientId: order.clientId },
+        customMetadata: { clientId: order.clientId ?? "" },
       });
       const url = await getDownloadURL(storageRef);
       await updateDoc(doc(db, "orders", order.id), {

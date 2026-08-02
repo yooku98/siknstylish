@@ -5,6 +5,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
+  sendEmailVerification,
   AuthError,
 } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase";
@@ -46,7 +47,10 @@ export default function AuthForm() {
 
     try {
       if (mode === "signUp") {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        // Fire-and-forget: not blocking sign-up on this, and Google sign-in
+        // (the other path) already comes with a verified email from Google.
+        sendEmailVerification(cred.user).catch(() => {});
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }

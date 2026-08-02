@@ -38,11 +38,13 @@ function NewOrderForm({
 }) {
   const [status, setStatus] = useState<CreateStatus>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setStatus("submitting");
     setError(null);
+    setInfo(null);
 
     const formData = new FormData(e.currentTarget);
     const email = String(formData.get("clientEmail")).trim().toLowerCase();
@@ -55,17 +57,13 @@ function NewOrderForm({
         where("email", "==", email),
       );
       const snap = await getDocs(usersQuery);
-      if (snap.empty) {
-        setError(
-          "No client account found with that email. They need to sign up in the client portal first.",
-        );
-        setStatus("error");
-        return;
-      }
-      const clientDoc = snap.docs[0];
+      // No portal account yet? Create the order anyway with clientId left
+      // null -- it auto-links the moment they sign up with this same,
+      // verified email (see firestore.rules canClaimOrder / AuthForm).
+      const clientId = snap.empty ? null : snap.docs[0].id;
 
       await addDoc(collection(db, "orders"), {
-        clientId: clientDoc.id,
+        clientId,
         clientEmail: email,
         collectionSlug,
         status: "consultation",
@@ -81,6 +79,12 @@ function NewOrderForm({
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+
+      if (clientId === null) {
+        setInfo(
+          "Order created. This client doesn't have a portal account yet -- it'll automatically show up in their portal once they sign up with this email.",
+        );
+      }
 
       (e.target as HTMLFormElement).reset();
       setStatus("idle");
@@ -146,6 +150,7 @@ function NewOrderForm({
         </div>
       </div>
       {error && <p className="text-sm text-red-700">{error}</p>}
+      {info && <p className="text-sm text-ink/60">{info}</p>}
       <button
         type="submit"
         disabled={status === "submitting"}
@@ -204,9 +209,14 @@ function OrderRow({ order }: { order: Order }) {
     try {
       const storagePath = `orders/${order.id}/sketches/${Date.now()}-${file.name}`;
       const storageRef = ref(storage, storagePath);
-      await uploadBytes(storageRef, file, {
-        customMetadata: { clientId: order.clientId },
-      });
+      // No customMetadata.clientId if the order is still unclaimed -- there's
+      // no uid to tag it with yet, so it just stays unreadable by any client
+      // (correct: nobody's signed in as this client yet) until claimed.
+      await uploadBytes(
+        storageRef,
+        file,
+        order.clientId ? { customMetadata: { clientId: order.clientId } } : undefined,
+      );
       const url = await getDownloadURL(storageRef);
       await updateDoc(doc(db, "orders", order.id), {
         sketches: arrayUnion({ url, storagePath }),
@@ -231,6 +241,9 @@ function OrderRow({ order }: { order: Order }) {
           </p>
         </div>
         <div className="flex gap-4 text-xs text-ink/60">
+          {!order.clientId && (
+            <span className="text-gold">Unclaimed — no portal account yet</span>
+          )}
           {order.sketchApproved && <span>Sketch approved</span>}
           {order.fabricApproved && <span>Fabric approved</span>}
         </div>
