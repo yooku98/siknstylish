@@ -4,27 +4,21 @@ import { FormEvent, useEffect, useState } from "react";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { User } from "firebase/auth";
 import { db } from "@/lib/firebase";
+import { maleMeasurementFields, femaleMeasurementFields } from "@/lib/measurements";
 
 type Status = "loading" | "idle" | "saving" | "saved" | "error";
-
-const fields: { key: string; label: string }[] = [
-  { key: "bustChest", label: "Bust / Chest" },
-  { key: "waist", label: "Waist" },
-  { key: "hips", label: "Hips" },
-  { key: "shoulderToWaist", label: "Shoulder to Waist" },
-  { key: "shoulderToFloor", label: "Shoulder to Floor" },
-  { key: "armLength", label: "Arm Length" },
-  { key: "sleeve", label: "Sleeve (fullest part of upper arm)" },
-];
+type Gender = "male" | "female";
 
 type Measurements = Record<string, string>;
 
 export default function MeasurementsForm({ user }: { user: User }) {
   const [status, setStatus] = useState<Status>("loading");
+  const [gender, setGender] = useState<Gender>("female");
   const [values, setValues] = useState<Measurements>({});
   const [notes, setNotes] = useState("");
 
   const measurementsRef = doc(db, "users", user.uid, "measurements", "current");
+  const fields = gender === "male" ? maleMeasurementFields : femaleMeasurementFields;
 
   useEffect(() => {
     let cancelled = false;
@@ -33,6 +27,7 @@ export default function MeasurementsForm({ user }: { user: User }) {
       if (cancelled) return;
       if (snap.exists()) {
         const data = snap.data();
+        setGender(data.gender === "male" ? "male" : "female");
         setValues(data.values ?? {});
         setNotes(data.notes ?? "");
       }
@@ -49,6 +44,7 @@ export default function MeasurementsForm({ user }: { user: User }) {
     setStatus("saving");
     try {
       await setDoc(measurementsRef, {
+        gender,
         values,
         notes,
         updatedAt: serverTimestamp(),
@@ -69,6 +65,24 @@ export default function MeasurementsForm({ user }: { user: User }) {
       className="flex flex-col gap-5 w-full text-left"
       onChange={() => status !== "saving" && setStatus("idle")}
     >
+      <div className="flex border border-ink/20 w-fit">
+        {(["female", "male"] as Gender[]).map((g) => (
+          <button
+            key={g}
+            type="button"
+            onClick={() => {
+              setGender(g);
+              setStatus("idle");
+            }}
+            className={`px-6 py-2.5 text-sm uppercase tracking-wide transition-colors ${
+              gender === g ? "bg-ink text-ivory" : "text-ink/70"
+            }`}
+          >
+            {g === "female" ? "Female" : "Male"}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         {fields.map(({ key, label }) => (
           <div key={key} className="flex flex-col gap-2">

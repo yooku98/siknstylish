@@ -21,35 +21,51 @@ export const measurementOptions: MeasurementOption[] = [
   },
 ];
 
-export const measurementGuideSteps = [
-  {
-    title: "What you'll need",
-    detail:
-      "A soft measuring tape, a mirror, and — ideally — a second person to help. Wear fitted clothing (or the undergarments you'd normally wear under the finished piece).",
-  },
-  {
-    title: "Bust / Chest",
-    detail:
-      "Measure around the fullest part of your bust/chest, keeping the tape level and snug but not tight.",
-  },
-  {
-    title: "Waist",
-    detail:
-      "Measure around the narrowest part of your natural waistline, usually just above the belly button.",
-  },
-  {
-    title: "Hips",
-    detail:
-      "Measure around the fullest part of your hips, roughly 20cm below your waistline.",
-  },
-  {
-    title: "Shoulder to Waist / Shoulder to Floor",
-    detail:
-      "For tops and dresses, measure from the shoulder seam down to the waist; for gowns, continue down to the desired hem length.",
-  },
-  {
-    title: "Arm Length & Sleeve",
-    detail:
-      "Measure from the shoulder seam to the wrist (or desired sleeve end), and separately around the fullest part of the upper arm.",
-  },
+export const measurementPrepTip =
+  "A soft measuring tape, a mirror, and — ideally — a second person to help. Wear fitted clothing (or the undergarments you'd normally wear under the finished piece).";
+
+export type MeasurementField = {
+  key: string;
+  label: string;
+};
+
+export const maleMeasurementFields: MeasurementField[] = [
+  { key: "acrossBack", label: "Across Back" },
+  { key: "chest", label: "Chest" },
+  { key: "aroundBody", label: "Around Body" },
+  { key: "neck", label: "Neck" },
+  { key: "sleeveLength", label: "Sleeve Length" },
+  { key: "aroundSleeve", label: "Around Sleeve" },
+  { key: "shirtLength", label: "Shirt Length" },
+  { key: "waist", label: "Waist" },
+  { key: "thigh", label: "Thigh" },
+  { key: "base", label: "Base" },
+  { key: "trouserLength", label: "Trouser Length / Shorts Length" },
+  { key: "crotch", label: "Crotch" },
+  { key: "seat", label: "Seat" },
+];
+
+export const femaleMeasurementFields: MeasurementField[] = [
+  { key: "acrossBack", label: "Across Back" },
+  { key: "bust", label: "Bust" },
+  { key: "waist", label: "Waist" },
+  { key: "upperBust", label: "Upper Bust" },
+  { key: "lowerBust", label: "Lower Bust" },
+  { key: "hip", label: "Hip" },
+  { key: "shoulderToBust", label: "Shoulder to Bust" },
+  { key: "shoulderToWaistFront", label: "Shoulder to Waist (Front)" },
+  { key: "shoulderToWaistBack", label: "Shoulder to Waist (Back)" },
+  { key: "shoulderToUpperBust", label: "Shoulder to Upper Bust" },
+  { key: "shoulderToLowerBust", label: "Shoulder to Lower Bust" },
+  { key: "nippleToNipple", label: "Nipple to Nipple" },
+  { key: "blouseLength", label: "Blouse Length" },
+  { key: "hipDepth", label: "Hip Depth" },
+  { key: "trueWaist", label: "True Waist" },
+  { key: "skirtLength", label: "Skirt Length" },
+  { key: "trouserLength", label: "Trouser Length" },
+  { key: "dressLength", label: "Dress Length" },
+  { key: "thigh", label: "Thigh" },
+  { key: "crotch", label: "Crotch" },
+  { key: "seat", label: "Seat" },
+  { key: "base", label: "Base" },
 ];
