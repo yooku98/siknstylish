@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sik n Stylish
 
-## Getting Started
+Website and client portal for Sik n Stylish, a bespoke fashion house in Accra, Ghana (evening wear, office wear, bridal, menswear and beaded pieces).
 
-First, run the development server:
+**Live site:** https://siknstylish.com/
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Features
+
+- **Marketing site:** home, about, portfolio (collections + per-item pages with a lightbox), process timeline, testimonials, FAQ, measurements guide. Includes SEO metadata, `sitemap.xml` and `robots.txt`
+- **Booking and contact forms:** sent through [Web3Forms](https://web3forms.com), so no form backend is needed
+- **Client portal** (`/portal`): Firebase Auth sign-in; clients save their measurements and track their orders
+- **Admin** (`/admin`): staff-only management of bookings, orders and portfolio items
+- **Payments (scaffold, not live):** Paystack Cloud Functions in `functions/`. See [`functions/README.md`](functions/README.md) for status and activation steps
+- WhatsApp floating contact button
+
+## Stack
+
+Next.js 16 (App Router, static export) · React 19 · TypeScript · Tailwind CSS v4 · Firebase (Auth, Firestore, Storage, Cloud Functions)
+
+## Structure
+
+```
+app/                 Routes (App Router): about, book, contact, faq, measurements,
+                     portal, admin, portfolio/[slug], process, testimonials
+components/          Grouped by feature (admin, booking, portal, portfolio, layout, ui, ...)
+lib/                 Content data (collections, faq, process, testimonials), Firebase
+                     client, Firestore helpers (orders, bookings, measurements), SEO config
+functions/           Firebase Cloud Functions (Paystack scaffold)
+firestore.rules      Firestore security rules (owner-scoped user data, staff role)
+storage.rules        Storage security rules
+scripts/set-staff-claim.mjs   Grants/revokes the `staff` custom claim
+public/CNAME         Custom domain for GitHub Pages
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Run locally
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cp .env.example .env.local   # fill in the Web3Forms key and Firebase web config
+npm install
+npm run dev                  # http://localhost:3000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Staff access
 
-## Learn More
+Admin access comes from a Firebase custom claim (`role: "staff"`), which can't be set from the Firebase console:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run grant-staff -- someone@example.com [path-to-service-account.json]
+npm run revoke-staff -- someone@example.com
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Keep service-account keys in `secrets/`, which is gitignored. Never commit them.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deployment
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Site:** `.github/workflows/deploy.yml` runs `next build` (`output: "export"`) on push to `main` and publishes `out/` to GitHub Pages. The `NEXT_PUBLIC_*` values come from repository secrets.
+- **Firestore rules and functions:** `firebase deploy --only firestore:rules` / `firebase deploy --only functions`. The project is set in `.firebaserc`.
+- **Storage rules:** `storage.rules` isn't listed in `firebase.json` yet, so the CLI won't deploy it. Add a `"storage": {"rules": "storage.rules"}` entry first, or publish the rules from the Firebase console.
