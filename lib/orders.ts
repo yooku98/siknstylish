@@ -9,6 +9,7 @@ export const orderStatuses = [
   "finishing",
   "ready",
   "delivered",
+  "cancelled",
 ] as const;
 
 export type OrderStatus = (typeof orderStatuses)[number];
@@ -22,6 +23,7 @@ export const orderStatusLabels: Record<OrderStatus, string> = {
   finishing: "Finishing",
   ready: "Ready for Pickup",
   delivered: "Delivered",
+  cancelled: "Cancelled",
 };
 
 export type StoredImage = {
@@ -35,6 +37,9 @@ export type Order = {
   // see AuthForm/PortalApp's auto-claim logic.
   clientId: string | null;
   clientEmail: string;
+  // Optional: orders created before these fields existed don't have them.
+  clientName?: string;
+  clientPhone?: string;
   collectionSlug: string;
   status: OrderStatus;
   totalAmount: number;

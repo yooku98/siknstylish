@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { collections } from "@/lib/collections";
+import type { OrderPrefill } from "@/components/admin/AdminOrders";
 import {
   BookingRequest,
   BookingRequestStatus,
@@ -26,16 +27,22 @@ function BookingRow({
   onCreateOrder,
 }: {
   request: BookingRequest;
-  onCreateOrder: (params: { email: string; collectionSlug: string }) => void;
+  onCreateOrder: (params: OrderPrefill) => void;
 }) {
   const [status, setStatus] = useState<BookingRequestStatus>(request.status);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const handleStatusChange = async (next: BookingRequestStatus) => {
+    const previous = status;
     setStatus(next);
     setSaving(true);
+    setSaveError(null);
     try {
       await updateDoc(doc(db, "bookingRequests", request.id), { status: next });
+    } catch {
+      setStatus(previous);
+      setSaveError("Couldn't update the status — please try again.");
     } finally {
       setSaving(false);
     }
@@ -87,6 +94,8 @@ function BookingRow({
         </div>
       </div>
 
+      {saveError && <p className="text-xs text-red-700">{saveError}</p>}
+
       {request.notes && (
         <p className="text-sm text-ink/70 bg-ink/5 p-3">{request.notes}</p>
       )}
@@ -96,7 +105,10 @@ function BookingRow({
         onClick={() =>
           onCreateOrder({
             email: request.email,
+            name: request.name,
+            phone: request.phone,
             collectionSlug: matchedCollection?.slug ?? "",
+            bookingId: request.id,
           })
         }
         className="self-start inline-flex items-center justify-center px-6 py-2.5 text-xs tracking-wide uppercase bg-ink text-ivory border border-ink hover:bg-gold hover:text-ink hover:border-gold transition-colors"
@@ -110,7 +122,7 @@ function BookingRow({
 export default function AdminBookings({
   onCreateOrder,
 }: {
-  onCreateOrder: (params: { email: string; collectionSlug: string }) => void;
+  onCreateOrder: (params: OrderPrefill) => void;
 }) {
   const [requests, setRequests] = useState<BookingRequest[]>([]);
   const [loading, setLoading] = useState(true);

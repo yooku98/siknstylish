@@ -3,7 +3,24 @@
 import { useState } from "react";
 import PlaceholderImage from "@/components/ui/PlaceholderImage";
 
-export default function Lightbox({ images }: { images: { label: string }[] }) {
+export type GalleryImage = { label: string; src?: string };
+
+function GalleryTile({ image, className }: { image: GalleryImage; className?: string }) {
+  if (!image.src) {
+    return <PlaceholderImage label={image.label} aspect="aspect-square" className={className} />;
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={image.src}
+      alt={image.label}
+      loading="lazy"
+      className={`${className} aspect-square object-cover border border-ink/10`}
+    />
+  );
+}
+
+export default function Lightbox({ images }: { images: GalleryImage[] }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const close = () => setOpenIndex(null);
@@ -17,13 +34,13 @@ export default function Lightbox({ images }: { images: { label: string }[] }) {
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         {images.map((image, i) => (
           <button
-            key={image.label}
+            key={image.src ?? image.label}
             type="button"
             onClick={() => setOpenIndex(i)}
             className="text-left"
             aria-label={`View ${image.label}`}
           >
-            <PlaceholderImage label={image.label} aspect="aspect-square" className="w-full" />
+            <GalleryTile image={image} className="w-full" />
           </button>
         ))}
       </div>
@@ -53,14 +70,23 @@ export default function Lightbox({ images }: { images: { label: string }[] }) {
             ‹
           </button>
           <div
-            className="max-w-md w-full"
+            className={images[openIndex].src ? "max-w-3xl w-full" : "max-w-md w-full"}
             onClick={(e) => e.stopPropagation()}
           >
-            <PlaceholderImage
-              label={images[openIndex].label}
-              aspect="aspect-square"
-              className="w-full"
-            />
+            {images[openIndex].src ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={images[openIndex].src}
+                alt={images[openIndex].label}
+                className="w-full max-h-[85vh] object-contain"
+              />
+            ) : (
+              <PlaceholderImage
+                label={images[openIndex].label}
+                aspect="aspect-square"
+                className="w-full"
+              />
+            )}
           </div>
           <button
             type="button"

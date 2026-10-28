@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import {
   collection,
   query,
@@ -17,6 +17,7 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { collections, getCollection } from "@/lib/collections";
+import { resizeImage } from "@/lib/resizeImage";
 import {
   Order,
   OrderStatus,
@@ -29,25 +30,43 @@ const inputClasses =
 
 type CreateStatus = "idle" | "submitting" | "error";
 
+export type OrderPrefill = {
+  email: string;
+  name: string;
+  phone: string;
+  collectionSlug: string;
+  bookingId: string;
+};
+
+function formatDate(order: Order) {
+  return order.createdAt
+    ? order.createdAt.toDate().toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+    : "Just now";
+}
+
 function NewOrderForm({
-  defaultEmail,
-  defaultCollectionSlug,
+  prefill,
+  onCreated,
 }: {
-  defaultEmail?: string;
-  defaultCollectionSlug?: string;
+  prefill?: OrderPrefill | null;
+  onCreated: (message: string) => void;
 }) {
   const [status, setStatus] = useState<CreateStatus>("idle");
   const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setStatus("submitting");
     setError(null);
-    setInfo(null);
 
     const formData = new FormData(e.currentTarget);
     const email = String(formData.get("clientEmail")).trim().toLowerCase();
+    const clientName = String(formData.get("clientName") ?? "").trim();
+    const clientPhone = String(formData.get("clientPhone") ?? "").trim();
     const collectionSlug = String(formData.get("collectionSlug"));
     const totalAmount = Number(formData.get("totalAmount")) || 0;
 
@@ -65,6 +84,8 @@ function NewOrderForm({
       await addDoc(collection(db, "orders"), {
         clientId,
         clientEmail: email,
+        clientName,
+        clientPhone,
         collectionSlug,
         status: "consultation",
         totalAmount,
@@ -80,14 +101,26 @@ function NewOrderForm({
         updatedAt: serverTimestamp(),
       });
 
+      const notes: string[] = [];
+      if (prefill?.bookingId) {
+        try {
+          await updateDoc(doc(db, "bookingRequests", prefill.bookingId), {
+            status: "converted",
+          });
+        } catch {
+          notes.push("Couldn't mark the booking as converted -- update it in the Bookings tab.");
+        }
+      }
       if (clientId === null) {
-        setInfo(
-          "Order created. This client doesn't have a portal account yet -- it'll automatically show up in their portal once they sign up with this email.",
+        notes.push(
+          "This client doesn't have a portal account yet -- the order will show up in their portal once they sign up with this email.",
         );
       }
-
       (e.target as HTMLFormElement).reset();
       setStatus("idle");
+      // Clears the booking prefill; reset() alone would restore its values
+      // and invite a duplicate order.
+      onCreated(notes.length ? `Order created. ${notes.join(" ")}` : "Order created.");
     } catch {
       setError("Something went wrong creating the order.");
       setStatus("error");
@@ -100,6 +133,37 @@ function NewOrderForm({
       className="flex flex-col gap-4 border border-ink/10 p-6"
     >
       <h3 className="font-serif text-xl text-ink">New Order</h3>
+      {prefill && (
+        <p className="text-xs text-ink/60">
+          From {prefill.name}&apos;s booking request -- it will be marked as converted.
+        </p>
+      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="flex flex-col gap-2">
+          <label className="text-sm text-ink/70" htmlFor="clientName">
+            Client Name
+          </label>
+          <input
+            id="clientName"
+            name="clientName"
+            type="text"
+            defaultValue={prefill?.name}
+            className={inputClasses}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label className="text-sm text-ink/70" htmlFor="clientPhone">
+            Phone / WhatsApp
+          </label>
+          <input
+            id="clientPhone"
+            name="clientPhone"
+            type="tel"
+            defaultValue={prefill?.phone}
+            className={inputClasses}
+          />
+        </div>
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="flex flex-col gap-2">
           <label className="text-sm text-ink/70" htmlFor="clientEmail">
@@ -110,7 +174,7 @@ function NewOrderForm({
             name="clientEmail"
             type="email"
             required
-            defaultValue={defaultEmail}
+            defaultValue={prefill?.email}
             className={inputClasses}
           />
         </div>
@@ -122,7 +186,7 @@ function NewOrderForm({
             id="collectionSlug"
             name="collectionSlug"
             required
-            defaultValue={defaultCollectionSlug || ""}
+            defaultValue={prefill?.collectionSlug || ""}
             className={inputClasses}
           >
             <option value="" disabled>
@@ -150,7 +214,6 @@ function NewOrderForm({
         </div>
       </div>
       {error && <p className="text-sm text-red-700">{error}</p>}
-      {info && <p className="text-sm text-ink/60">{info}</p>}
       <button
         type="submit"
         disabled={status === "submitting"}
@@ -167,6 +230,8 @@ function OrderRow({ order }: { order: Order }) {
   const [staffNotes, setStaffNotes] = useState(order.staffNotes);
   const [depositPaid, setDepositPaid] = useState(order.depositPaid);
   const [totalAmount, setTotalAmount] = useState(order.totalAmount);
+  const [clientName, setClientName] = useState(order.clientName ?? "");
+  const [clientPhone, setClientPhone] = useState(order.clientPhone ?? "");
   const [saveState, setSaveState] = useState<"idle" | "saving">("idle");
   const [savedRecently, setSavedRecently] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -177,9 +242,13 @@ function OrderRow({ order }: { order: Order }) {
     status !== order.status ||
     staffNotes !== order.staffNotes ||
     depositPaid !== order.depositPaid ||
-    totalAmount !== order.totalAmount;
+    totalAmount !== order.totalAmount ||
+    clientName !== (order.clientName ?? "") ||
+    clientPhone !== (order.clientPhone ?? "");
+  const overpaid = depositPaid > totalAmount;
 
   const handleSave = async () => {
+    if (overpaid) return;
     setSaveState("saving");
     setSaveError(null);
     try {
@@ -188,6 +257,8 @@ function OrderRow({ order }: { order: Order }) {
         staffNotes,
         depositPaid,
         totalAmount,
+        clientName: clientName.trim(),
+        clientPhone: clientPhone.trim(),
         balanceDue: totalAmount - depositPaid,
         updatedAt: serverTimestamp(),
       });
@@ -200,13 +271,14 @@ function OrderRow({ order }: { order: Order }) {
   };
 
   const handleSketchUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const picked = e.target.files?.[0];
     e.target.value = "";
-    if (!file) return;
+    if (!picked) return;
 
     setSketchUploading(true);
     setSketchError(null);
     try {
+      const file = await resizeImage(picked);
       const storagePath = `orders/${order.id}/sketches/${Date.now()}-${file.name}`;
       const storageRef = ref(storage, storagePath);
       // No customMetadata.clientId if the order is still unclaimed -- there's
@@ -235,9 +307,14 @@ function OrderRow({ order }: { order: Order }) {
     <div className="border border-ink/10 p-6 flex flex-col gap-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
-          <p className="text-ink font-medium">{order.clientEmail}</p>
-          <p className="text-ink/50 text-xs uppercase tracking-wide">
-            {collectionName}
+          <p className="text-ink font-medium">{order.clientName || order.clientEmail}</p>
+          <p className="text-ink/60 text-sm">
+            {[order.clientName ? order.clientEmail : null, order.clientPhone]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+          <p className="text-ink/50 text-xs uppercase tracking-wide mt-1">
+            {collectionName} · {formatDate(order)}
           </p>
         </div>
         <div className="flex gap-4 text-xs text-ink/60">
@@ -304,6 +381,31 @@ function OrderRow({ order }: { order: Order }) {
         )}
       </div>
 
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="flex flex-col gap-2">
+          <label className="text-xs text-ink/60 uppercase tracking-wide">
+            Client Name
+          </label>
+          <input
+            type="text"
+            value={clientName}
+            onChange={(e) => setClientName(e.target.value)}
+            className={inputClasses}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label className="text-xs text-ink/60 uppercase tracking-wide">
+            Phone / WhatsApp
+          </label>
+          <input
+            type="tel"
+            value={clientPhone}
+            onChange={(e) => setClientPhone(e.target.value)}
+            className={inputClasses}
+          />
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="flex flex-col gap-2">
           <label className="text-xs text-ink/60 uppercase tracking-wide">
@@ -349,7 +451,7 @@ function OrderRow({ order }: { order: Order }) {
           <label className="text-xs text-ink/60 uppercase tracking-wide">
             Balance Due
           </label>
-          <p className="px-4 py-3 text-sm text-ink/70">
+          <p className={`px-4 py-3 text-sm ${overpaid ? "text-red-700" : "text-ink/70"}`}>
             GH₵ {(totalAmount - depositPaid).toLocaleString()}
           </p>
         </div>
@@ -371,13 +473,18 @@ function OrderRow({ order }: { order: Order }) {
         <button
           type="button"
           onClick={handleSave}
-          disabled={!dirty || saveState === "saving"}
+          disabled={!dirty || overpaid || saveState === "saving"}
           className="self-start inline-flex items-center justify-center px-6 py-2.5 text-xs tracking-wide uppercase bg-ink text-ivory border border-ink hover:bg-gold hover:text-ink hover:border-gold transition-colors disabled:opacity-40"
         >
           {saveState === "saving" ? "Saving..." : "Save Changes"}
         </button>
         {!dirty && savedRecently && (
           <span className="text-xs text-ink/50">Saved.</span>
+        )}
+        {overpaid && (
+          <span className="text-xs text-red-700">
+            Deposit can&apos;t be more than the total.
+          </span>
         )}
         {saveError && (
           <span className="text-xs text-red-700">{saveError}</span>
@@ -387,14 +494,36 @@ function OrderRow({ order }: { order: Order }) {
   );
 }
 
+type StatusFilter = "all" | "active" | OrderStatus;
+
+const closedStatuses: OrderStatus[] = ["delivered", "cancelled"];
+
 export default function AdminOrders({
   prefill,
+  onPrefillUsed,
 }: {
-  prefill?: { email: string; collectionSlug: string } | null;
+  prefill?: OrderPrefill | null;
+  onPrefillUsed: () => void;
 }) {
+  const [createdInfo, setCreatedInfo] = useState<string | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+
+  const visibleOrders = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return orders.filter((order) => {
+      if (statusFilter === "active" && closedStatuses.includes(order.status)) return false;
+      if (statusFilter !== "all" && statusFilter !== "active" && order.status !== statusFilter) {
+        return false;
+      }
+      if (!term) return true;
+      return [order.clientEmail, order.clientName, order.clientPhone]
+        .some((field) => field?.toLowerCase().includes(term));
+    });
+  }, [orders, search, statusFilter]);
 
   useEffect(() => {
     const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
@@ -414,18 +543,53 @@ export default function AdminOrders({
 
   return (
     <div className="flex flex-col gap-8">
+      {createdInfo && (
+        <p role="status" className="text-sm text-ink/70 border border-gold/40 bg-gold/10 px-4 py-3">
+          {createdInfo}
+        </p>
+      )}
       <NewOrderForm
-        key={prefill ? `${prefill.email}-${prefill.collectionSlug}` : "empty"}
-        defaultEmail={prefill?.email}
-        defaultCollectionSlug={prefill?.collectionSlug}
+        key={prefill?.bookingId ?? "empty"}
+        prefill={prefill}
+        onCreated={(message) => {
+          setCreatedInfo(message);
+          onPrefillUsed();
+        }}
       />
       <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name, email or phone"
+            aria-label="Search orders"
+            className={`${inputClasses} flex-1`}
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+            aria-label="Filter by status"
+            className={inputClasses}
+          >
+            <option value="all">All orders ({orders.length})</option>
+            <option value="active">In progress (not delivered or cancelled)</option>
+            {orderStatuses.map((s) => (
+              <option key={s} value={s}>
+                {orderStatusLabels[s]}
+              </option>
+            ))}
+          </select>
+        </div>
         {loading && <p className="text-ink/60 text-sm">Loading orders...</p>}
         {error && <p className="text-sm text-red-700">{error}</p>}
         {!loading && !error && orders.length === 0 && (
           <p className="text-ink/60 text-sm">No orders yet.</p>
         )}
-        {orders.map((order) => (
+        {!loading && orders.length > 0 && visibleOrders.length === 0 && (
+          <p className="text-ink/60 text-sm">No orders match this search.</p>
+        )}
+        {visibleOrders.map((order) => (
           <OrderRow key={order.id} order={order} />
         ))}
       </div>

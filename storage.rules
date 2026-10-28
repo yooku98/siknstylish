@@ -14,9 +14,16 @@ service firebase.storage {
     function isStaff() {
       return isSignedIn() && request.auth.token.role == 'staff';
     }
+    // Uploads are resized client-side (lib/resizeImage.ts), so 10 MB only
+    // bites on files that couldn't be decoded/resized, e.g. HEIC.
+    function isImageUpload() {
+      return request.resource.size < 10 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*');
+    }
     match /portfolio/{collectionSlug}/{fileName} {
       allow read: if true;
-      allow write: if isStaff();
+      allow create, update: if isStaff() && isImageUpload();
+      allow delete: if isStaff();
     }
 
     // Ownership is tagged via customMetadata.clientId at upload time (set by
@@ -27,14 +34,16 @@ service firebase.storage {
     match /orders/{orderId}/sketches/{fileName} {
       allow read: if isStaff() ||
         (isSignedIn() && resource.metadata.clientId == request.auth.uid);
-      allow write: if isStaff();
+      allow create, update: if isStaff() && isImageUpload();
+      allow delete: if isStaff();
     }
 
     match /orders/{orderId}/inspiration/{fileName} {
       allow read: if isStaff() ||
         (isSignedIn() && resource.metadata.clientId == request.auth.uid);
-      allow write: if isStaff() ||
-        (isSignedIn() && request.resource.metadata.clientId == request.auth.uid);
+      allow create, update: if isImageUpload() && (isStaff() ||
+        (isSignedIn() && request.resource.metadata.clientId == request.auth.uid));
+      allow delete: if isStaff();
     }
   }
 }

@@ -15,6 +15,7 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { getCollection } from "@/lib/collections";
+import { resizeImage } from "@/lib/resizeImage";
 import { Order, orderStatusLabels } from "@/lib/orders";
 
 function OrderCard({ order }: { order: Order }) {
@@ -56,10 +57,11 @@ function OrderCard({ order }: { order: Order }) {
     }
   };
 
-  const handlePhotoUpload = async (file: File) => {
+  const handlePhotoUpload = async (picked: File) => {
     setUploading(true);
     setError(null);
     try {
+      const file = await resizeImage(picked);
       const storagePath = `orders/${order.id}/inspiration/${Date.now()}-${file.name}`;
       const storageRef = ref(storage, storagePath);
       // OrdersPanel only ever renders orders already claimed by this user
