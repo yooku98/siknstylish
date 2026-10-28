@@ -4,6 +4,8 @@ type Props = {
   description?: string;
   align?: "left" | "center";
   as?: "h1" | "h2";
+  // "dark" for headings placed on bg-ink sections.
+  tone?: "light" | "dark";
 };
 
 export default function SectionHeading({
@@ -12,6 +14,7 @@ export default function SectionHeading({
   description,
   align = "center",
   as: Heading = "h2",
+  tone = "light",
 }: Props) {
   const alignClasses = align === "center" ? "text-center items-center mx-auto" : "text-left items-start";
 
@@ -22,11 +25,13 @@ export default function SectionHeading({
           {eyebrow}
         </span>
       )}
-      <Heading className="font-serif text-3xl sm:text-4xl lg:text-5xl leading-tight text-ink">
+      <Heading className={`font-serif text-3xl sm:text-4xl lg:text-5xl leading-tight ${tone === "dark" ? "text-ivory" : "text-ink"}`}>
         {title}
       </Heading>
       {description && (
-        <p className="text-ink/70 text-base sm:text-lg leading-relaxed">
+        <p
+          className={`text-base sm:text-lg leading-relaxed ${tone === "dark" ? "text-ivory/70" : "text-ink/70"}`}
+        >
           {description}
         </p>
       )}

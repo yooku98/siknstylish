@@ -57,10 +57,10 @@ export default function AboutPage() {
                 a purpose.
               </p>
               <p className="font-serif text-xl text-ink not-italic">
-                That journey gave birth to SiknStylish.
+                That journey gave birth to Sik n Stylish.
               </p>
               <p>
-                Today, SiknStylish is more than a fashion brand, it&rsquo;s a
+                Today, Sik n Stylish is more than a fashion brand, it&rsquo;s a
                 celebration of individuality, craftsmanship, and timeless
                 elegance. Every garment is thoughtfully designed and
                 meticulously tailored to reflect the personality, confidence,
@@ -82,7 +82,7 @@ export default function AboutPage() {
             Design Philosophy
           </span>
           <p className="font-serif text-2xl sm:text-3xl lg:text-4xl leading-snug">
-            We believe true luxury lies in individuality. Every SiknStylish
+            We believe true luxury lies in individuality. Every Sik n Stylish
             creation is tailored with precision, crafted with intention, and
             designed to empower confidence through timeless elegance.
           </p>
@@ -97,7 +97,7 @@ export default function AboutPage() {
             </h2>
             <div className="text-ink/70 text-base leading-relaxed flex flex-col gap-4">
               <p>
-                At SiknStylish, craftsmanship is at the heart of everything we
+                At Sik n Stylish, craftsmanship is at the heart of everything we
                 do. Every garment is created with precision, patience, and
                 an unwavering attention to detail. From the first
                 consultation to the final stitch, we are committed to
@@ -124,7 +124,7 @@ export default function AboutPage() {
             </h2>
             <div className="text-ink/70 text-base leading-relaxed flex flex-col gap-4">
               <p>
-                At SiknStylish, we don&rsquo;t simply make clothes, every
+                At Sik n Stylish, we don&rsquo;t simply make clothes, every
                 piece begins with a conversation, because we believe fashion
                 should reflect your personality, lifestyle, and
                 individuality. Rather than producing collections in standard
@@ -144,7 +144,7 @@ export default function AboutPage() {
                 impression long after they&rsquo;re worn.
               </p>
               <p>
-                When you choose SiknStylish, you&rsquo;re not just investing
+                When you choose Sik n Stylish, you&rsquo;re not just investing
                 in clothing, you&rsquo;re investing in a bespoke experience
                 crafted exclusively for you.
               </p>

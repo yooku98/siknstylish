@@ -39,7 +39,7 @@ export default function ContactForm() {
       <div className="border border-gold bg-gold/10 p-8 text-center flex flex-col gap-2">
         <h3 className="font-serif text-xl text-ink">Message Sent</h3>
         <p className="text-ink/70 text-sm">
-          Thanks for reaching out — we'll respond as soon as we can.
+          Thanks for reaching out — we&apos;ll respond as soon as we can.
         </p>
       </div>
     );

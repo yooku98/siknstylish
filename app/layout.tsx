@@ -3,7 +3,7 @@ import { Playfair_Display, Inter } from "next/font/google";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import WhatsAppFloatingButton from "@/components/layout/WhatsAppFloatingButton";
-import { siteConfig, baseKeywords } from "@/lib/seo";
+import { siteConfig, baseKeywords, ogImage } from "@/lib/seo";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -33,11 +33,13 @@ export const metadata: Metadata = {
     siteName: siteConfig.name,
     locale: siteConfig.locale,
     type: "website",
+    images: [ogImage],
   },
   twitter: {
     card: "summary_large_image",
     title: `${siteConfig.name} | Bespoke Fashion in Accra, Ghana`,
     description: siteConfig.description,
+    images: [ogImage.url],
   },
 };
 
