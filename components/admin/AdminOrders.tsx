@@ -13,17 +13,22 @@ import {
   onSnapshot,
   serverTimestamp,
   arrayUnion,
+  runTransaction,
+  Timestamp,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
+import { auth, db, storage } from "@/lib/firebase";
 import { collections, getCollection } from "@/lib/collections";
 import { resizeImage } from "@/lib/resizeImage";
 import {
   Order,
   OrderStatus,
+  PaymentMethod,
   orderStatuses,
   orderStatusLabels,
+  paymentMethodLabels,
 } from "@/lib/orders";
+import PaymentHistory, { usePayments } from "@/components/payments/PaymentHistory";
 
 const inputClasses =
   "border border-ink/20 bg-ivory px-4 py-3 text-sm focus:outline-none focus:border-gold";
@@ -225,10 +230,199 @@ function NewOrderForm({
   );
 }
 
+const roundCedis = (n: number) => Math.round(n * 100) / 100;
+
+// Staff can record these; "paystack" entries only come from Cloud Functions.
+const manualPaymentMethods: PaymentMethod[] = ["cash", "momo", "bank", "other"];
+
+function todayInputValue() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function RecordPayment({ order }: { order: Order }) {
+  const [kind, setKind] = useState<"payment" | "correction">("payment");
+  const [amount, setAmount] = useState("");
+  const [method, setMethod] = useState<PaymentMethod>("momo");
+  const [paidOn, setPaidOn] = useState(todayInputValue);
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [recorded, setRecorded] = useState(false);
+
+  const parsed = roundCedis(Number(amount));
+  const validAmount = Number.isFinite(parsed) && parsed > 0;
+  const needsNote = kind === "correction" && !note.trim();
+
+  const handleRecord = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const user = auth.currentUser;
+    if (!validAmount || needsNote || !user) return;
+    setSaving(true);
+    setError(null);
+    setRecorded(false);
+
+    const signed = kind === "correction" ? -parsed : parsed;
+    const orderRef = doc(db, "orders", order.id);
+    const paymentRef = doc(collection(orderRef, "payments"));
+    try {
+      // A transaction so the new deposit is based on the latest saved value,
+      // not whatever this screen loaded -- two staff recording at once can't
+      // overwrite each other.
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(orderRef);
+        if (!snap.exists()) throw new Error("missing");
+        const current = snap.data() as Order;
+        const depositPaid = roundCedis((current.depositPaid ?? 0) + signed);
+        if (depositPaid > current.totalAmount) throw new Error("overpaid");
+        if (depositPaid < 0) throw new Error("negative");
+
+        tx.set(paymentRef, {
+          amount: signed,
+          method,
+          note: note.trim(),
+          source: "manual",
+          // Noon avoids the date shifting a day if a browser isn't on GMT.
+          paidAt: Timestamp.fromDate(new Date(`${paidOn}T12:00:00`)),
+          recordedBy: user.uid,
+          recordedByEmail: user.email ?? "",
+          processedAt: serverTimestamp(),
+        });
+        tx.update(orderRef, {
+          depositPaid,
+          balanceDue: roundCedis(current.totalAmount - depositPaid),
+          lastPaymentId: paymentRef.id,
+          updatedAt: serverTimestamp(),
+        });
+      });
+      setAmount("");
+      setNote("");
+      setKind("payment");
+      setRecorded(true);
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : "";
+      setError(
+        reason === "overpaid"
+          ? "That would take payments above the order total."
+          : reason === "negative"
+            ? "A correction can't take the total paid below zero."
+            : "Couldn't record the payment — please try again.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleRecord} className="flex flex-col gap-3 bg-ink/5 p-4">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <select
+          value={kind}
+          onChange={(e) => setKind(e.target.value as "payment" | "correction")}
+          aria-label="Entry type"
+          className={inputClasses}
+        >
+          <option value="payment">Payment received</option>
+          <option value="correction">Correction / refund</option>
+        </select>
+        <input
+          type="number"
+          min="0.01"
+          step="0.01"
+          inputMode="decimal"
+          placeholder="Amount (GH₵)"
+          aria-label="Amount in cedis"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          className={inputClasses}
+        />
+        <select
+          value={method}
+          onChange={(e) => setMethod(e.target.value as PaymentMethod)}
+          aria-label="Payment method"
+          className={inputClasses}
+        >
+          {manualPaymentMethods.map((m) => (
+            <option key={m} value={m}>
+              {paymentMethodLabels[m]}
+            </option>
+          ))}
+        </select>
+        <input
+          type="date"
+          value={paidOn}
+          max={todayInputValue()}
+          onChange={(e) => setPaidOn(e.target.value || todayInputValue())}
+          aria-label="Date paid"
+          className={inputClasses}
+        />
+      </div>
+      <input
+        type="text"
+        maxLength={300}
+        placeholder={
+          kind === "correction"
+            ? "Reason for the correction (required, visible to the client)"
+            : "Note, e.g. MoMo reference (optional, visible to the client)"
+        }
+        aria-label="Note"
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        className={inputClasses}
+      />
+      <div className="flex flex-wrap items-center gap-4">
+        <button
+          type="submit"
+          disabled={!validAmount || needsNote || saving}
+          className="inline-flex items-center justify-center px-5 py-2 text-xs tracking-wide uppercase border border-ink text-ink hover:bg-ink hover:text-ivory transition-colors disabled:opacity-40"
+        >
+          {saving ? "Recording..." : kind === "correction" ? "Record Correction" : "Record Payment"}
+        </button>
+        {recorded && <span className="text-xs text-ink/50">Recorded.</span>}
+        {error && <span className="text-xs text-red-700">{error}</span>}
+      </div>
+    </form>
+  );
+}
+
+function OrderPayments({ order }: { order: Order }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="self-start text-xs text-ink/60 uppercase tracking-wide hover:text-gold"
+      >
+        Payments {open ? "▴" : "▾"}
+      </button>
+      {/* Mounted only when open so a long order list doesn't hold one live
+          listener per order. */}
+      {open && <OrderPaymentsBody order={order} />}
+    </div>
+  );
+}
+
+function OrderPaymentsBody({ order }: { order: Order }) {
+  const { payments, loading, error } = usePayments(order.id);
+  return (
+    <>
+      <PaymentHistory
+        payments={payments}
+        loading={loading}
+        error={error}
+        depositPaid={order.depositPaid}
+        showRecordedBy
+      />
+      <RecordPayment order={order} />
+    </>
+  );
+}
+
 function OrderRow({ order }: { order: Order }) {
   const [status, setStatusField] = useState<OrderStatus>(order.status);
   const [staffNotes, setStaffNotes] = useState(order.staffNotes);
-  const [depositPaid, setDepositPaid] = useState(order.depositPaid);
   const [totalAmount, setTotalAmount] = useState(order.totalAmount);
   const [clientName, setClientName] = useState(order.clientName ?? "");
   const [clientPhone, setClientPhone] = useState(order.clientPhone ?? "");
@@ -241,10 +435,11 @@ function OrderRow({ order }: { order: Order }) {
   const dirty =
     status !== order.status ||
     staffNotes !== order.staffNotes ||
-    depositPaid !== order.depositPaid ||
     totalAmount !== order.totalAmount ||
     clientName !== (order.clientName ?? "") ||
     clientPhone !== (order.clientPhone ?? "");
+  // Deposits only change through the payment log, so this is the live value.
+  const depositPaid = order.depositPaid;
   const overpaid = depositPaid > totalAmount;
 
   const handleSave = async () => {
@@ -252,19 +447,31 @@ function OrderRow({ order }: { order: Order }) {
     setSaveState("saving");
     setSaveError(null);
     try {
-      await updateDoc(doc(db, "orders", order.id), {
-        status,
-        staffNotes,
-        depositPaid,
-        totalAmount,
-        clientName: clientName.trim(),
-        clientPhone: clientPhone.trim(),
-        balanceDue: totalAmount - depositPaid,
-        updatedAt: serverTimestamp(),
+      const orderRef = doc(db, "orders", order.id);
+      // Read the deposit inside the transaction: a payment recorded since
+      // this screen loaded must not be undone by a stale balance.
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(orderRef);
+        if (!snap.exists()) throw new Error("missing");
+        const latestDeposit = (snap.data() as Order).depositPaid ?? 0;
+        if (latestDeposit > totalAmount) throw new Error("overpaid");
+        tx.update(orderRef, {
+          status,
+          staffNotes,
+          totalAmount,
+          clientName: clientName.trim(),
+          clientPhone: clientPhone.trim(),
+          balanceDue: roundCedis(totalAmount - latestDeposit),
+          updatedAt: serverTimestamp(),
+        });
       });
       setSavedRecently(true);
-    } catch {
-      setSaveError("Couldn't save — please try again.");
+    } catch (err) {
+      setSaveError(
+        err instanceof Error && err.message === "overpaid"
+          ? "The total can't be less than what's already been paid."
+          : "Couldn't save — please try again.",
+      );
     } finally {
       setSaveState("idle");
     }
@@ -436,26 +643,24 @@ function OrderRow({ order }: { order: Order }) {
           />
         </div>
         <div className="flex flex-col gap-2">
-          <label className="text-xs text-ink/60 uppercase tracking-wide">
-            Deposit Paid (GH₵)
-          </label>
-          <input
-            type="number"
-            min="0"
-            value={depositPaid}
-            onChange={(e) => setDepositPaid(Number(e.target.value) || 0)}
-            className={inputClasses}
-          />
+          <span className="text-xs text-ink/60 uppercase tracking-wide">
+            Paid So Far
+          </span>
+          <p className="px-4 py-3 text-sm text-ink/70">
+            GH₵ {depositPaid.toLocaleString()}
+          </p>
         </div>
         <div className="flex flex-col gap-2">
           <label className="text-xs text-ink/60 uppercase tracking-wide">
             Balance Due
           </label>
           <p className={`px-4 py-3 text-sm ${overpaid ? "text-red-700" : "text-ink/70"}`}>
-            GH₵ {(totalAmount - depositPaid).toLocaleString()}
+            GH₵ {roundCedis(totalAmount - depositPaid).toLocaleString()}
           </p>
         </div>
       </div>
+
+      <OrderPayments order={order} />
 
       <div className="flex flex-col gap-2">
         <label className="text-xs text-ink/60 uppercase tracking-wide">
@@ -483,7 +688,7 @@ function OrderRow({ order }: { order: Order }) {
         )}
         {overpaid && (
           <span className="text-xs text-red-700">
-            Deposit can&apos;t be more than the total.
+            The total can&apos;t be less than what&apos;s been paid.
           </span>
         )}
         {saveError && (
