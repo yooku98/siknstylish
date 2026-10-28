@@ -8,11 +8,6 @@ import { navGroups } from "@/lib/navigation";
 
 export default function MobileNav() {
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     if (open) {
@@ -88,7 +83,9 @@ export default function MobileNav() {
         />
       </button>
 
-      {open && mounted && createPortal(overlay, document.body)}
+      {/* `open` only becomes true from a tap, i.e. after hydration, so
+          document.body always exists here. */}
+      {open && createPortal(overlay, document.body)}
     </div>
   );
 }
