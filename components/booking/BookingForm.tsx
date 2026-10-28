@@ -15,11 +15,7 @@ export default function BookingForm() {
     setStatus("submitting");
 
     const accessKey = process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY;
-    if (!accessKey) {
-      setStatus("error");
-      return;
-    }
-
+    const form = e.currentTarget;
     const formData = new FormData(e.currentTarget);
     const bookingFields = {
       name: String(formData.get("name") ?? ""),
@@ -32,13 +28,9 @@ export default function BookingForm() {
       notes: String(formData.get("notes") ?? ""),
     };
 
-    formData.append("access_key", accessKey);
-    formData.append("subject", "New Consultation Booking Request — Sik n Stylish");
-
-    // The email stays the source of truth for whether the request "went
-    // through" from the client's point of view; the Firestore copy is so
-    // staff also see it in /admin. If that copy fails (or hangs), say so in
-    // the email instead of silently dropping it from the admin panel.
+    // The request counts as received if either the Firestore copy (what
+    // staff see in /admin) or the email lands. If the Firestore copy fails
+    // (or hangs), say so in the email instead of silently dropping it.
     const savedToAdmin = await Promise.race([
       addDoc(collection(db, "bookingRequests"), {
         ...bookingFields,
@@ -57,15 +49,26 @@ export default function BookingForm() {
       );
     }
 
-    try {
-      const res = await fetch("https://api.web3forms.com/submit", {
-        method: "POST",
-        body: formData,
-      });
-      const result = await res.json();
-      setStatus(result.success ? "success" : "error");
-      if (result.success) (e.target as HTMLFormElement).reset();
-    } catch {
+    let emailed = false;
+    if (accessKey) {
+      formData.append("access_key", accessKey);
+      formData.append("subject", "New Consultation Booking Request — Sik n Stylish");
+      try {
+        const res = await fetch("https://api.web3forms.com/submit", {
+          method: "POST",
+          body: formData,
+        });
+        const result = await res.json();
+        emailed = result.success === true;
+      } catch {
+        emailed = false;
+      }
+    }
+
+    if (savedToAdmin || emailed) {
+      setStatus("success");
+      form.reset();
+    } else {
       setStatus("error");
     }
   };
