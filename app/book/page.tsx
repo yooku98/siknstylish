@@ -29,7 +29,7 @@ export default function BookPage() {
             />
             <p className="text-ink/70 text-base leading-relaxed">
               Choose in-person or virtual, share your preferred date and
-              time, and tell us a little about the occasion. We'll confirm
+              time, and tell us a little about the occasion. We&apos;ll confirm
               your consultation directly.
             </p>
             <p className="text-ink/70 text-sm leading-relaxed">
@@ -74,6 +74,7 @@ export default function BookPage() {
             eyebrow="What Happens Next"
             title="From Consultation to Delivery"
             align="left"
+            tone="dark"
           />
           <div className="[&_h3]:text-ivory [&_p]:text-ivory/70">
             <ProcessTimeline />

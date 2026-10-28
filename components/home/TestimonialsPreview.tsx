@@ -2,7 +2,9 @@ import Container from "@/components/ui/Container";
 import SectionHeading from "@/components/ui/SectionHeading";
 import Button from "@/components/ui/Button";
 import TestimonialCard from "@/components/testimonials/TestimonialCard";
-import { testimonials } from "@/lib/testimonials";
+import { testimonials, testimonialGridClasses } from "@/lib/testimonials";
+
+const PREVIEW_COUNT = 3;
 
 export default function TestimonialsPreview() {
   return (
@@ -11,18 +13,20 @@ export default function TestimonialsPreview() {
         <SectionHeading
           eyebrow="Testimonials"
           title="Worn With Confidence"
-          description="A few words from clients — real testimonials are added here as they come in."
+          description="In our clients' own words."
         />
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          {testimonials.map((t) => (
+        <div className={testimonialGridClasses(Math.min(testimonials.length, PREVIEW_COUNT))}>
+          {testimonials.slice(0, PREVIEW_COUNT).map((t) => (
             <TestimonialCard key={t.id} testimonial={t} />
           ))}
         </div>
-        <div className="flex justify-center">
-          <Button href="/testimonials" variant="outline">
-            Read More Testimonials
-          </Button>
-        </div>
+        {testimonials.length > PREVIEW_COUNT && (
+          <div className="flex justify-center">
+            <Button href="/testimonials" variant="outline">
+              Read More Testimonials
+            </Button>
+          </div>
+        )}
       </Container>
     </section>
   );

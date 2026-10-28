@@ -3,7 +3,7 @@ import Container from "@/components/ui/Container";
 import SectionHeading from "@/components/ui/SectionHeading";
 import Button from "@/components/ui/Button";
 import TestimonialCard from "@/components/testimonials/TestimonialCard";
-import { testimonials } from "@/lib/testimonials";
+import { testimonials, testimonialGridClasses } from "@/lib/testimonials";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
@@ -20,10 +20,10 @@ export default function TestimonialsPage() {
         <SectionHeading
           eyebrow="Testimonials"
           title="What Clients Say"
-          description="Real feedback from clients, added as it comes in — with their permission."
+          description="Feedback from clients, shared with their permission."
           as="h1"
         />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className={testimonialGridClasses(testimonials.length)}>
           {testimonials.map((t) => (
             <TestimonialCard key={t.id} testimonial={t} />
           ))}

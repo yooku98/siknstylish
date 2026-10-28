@@ -1,6 +1,6 @@
-// Entries marked "placeholder-*" below are PLACEHOLDER content — no real
-// client names, quotes or photos exist for them yet. Replace every field
-// with real testimonials (with client permission) before this site goes live.
+// Real client testimonials only, added with the client's permission.
+// Layouts adapt to the count (see testimonialGridClasses), so add entries
+// here as they come in -- never placeholder text, which renders publicly.
 export type Testimonial = {
   id: string;
   quote: string;
@@ -16,18 +16,11 @@ export const testimonials: Testimonial[] = [
     clientName: "Anna",
     occasion: "Custom Dress",
   },
-  {
-    id: "placeholder-2",
-    quote:
-      "[PLACEHOLDER TESTIMONIAL — replace with a real client quote about the process, fit, or craftsmanship.]",
-    clientName: "[Client name]",
-    occasion: "[Occasion]",
-  },
-  {
-    id: "placeholder-3",
-    quote:
-      "[PLACEHOLDER TESTIMONIAL — replace with a real client quote, ideally paired with a permissioned photo.]",
-    clientName: "[Client name]",
-    occasion: "[Occasion]",
-  },
 ];
+
+// One quote reads as a featured pull-quote; more fill a grid.
+export function testimonialGridClasses(count: number) {
+  if (count <= 1) return "grid grid-cols-1 max-w-2xl mx-auto w-full";
+  if (count === 2) return "grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-4xl mx-auto w-full";
+  return "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6";
+}

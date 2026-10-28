@@ -98,7 +98,7 @@ export default function AuthForm() {
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4 text-left">
         <div className="flex flex-col gap-2">
           <label className="text-sm text-ink/70" htmlFor="email">
             Email

@@ -7,18 +7,12 @@ export default function ProcessPreview() {
   return (
     <section className="py-16 sm:py-24 bg-ink text-ivory">
       <Container className="flex flex-col gap-12">
-        <div className="flex flex-col gap-4 items-center text-center max-w-2xl mx-auto">
-          <span className="text-gold text-xs sm:text-sm uppercase tracking-[0.2em]">
-            Our Process
-          </span>
-          <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl leading-tight text-ivory">
-            What Happens After You Reach Out
-          </h2>
-          <p className="text-ivory/70 text-base sm:text-lg leading-relaxed">
-            From first consultation to final delivery, here is exactly what
-            to expect.
-          </p>
-        </div>
+        <SectionHeading
+          eyebrow="Our Process"
+          title="What Happens After You Reach Out"
+          description="From first consultation to final delivery, here is exactly what to expect."
+          tone="dark"
+        />
         <div className="[&_h3]:text-ivory [&_p]:text-ivory/70">
           <ProcessTimeline />
         </div>
