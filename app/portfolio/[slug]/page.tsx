@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import Container from "@/components/ui/Container";
 import PlaceholderImage from "@/components/ui/PlaceholderImage";
 import Button from "@/components/ui/Button";
-import Lightbox from "@/components/portfolio/Lightbox";
+import CollectionGallery from "@/components/portfolio/CollectionGallery";
 import { collections, getCollection } from "@/lib/collections";
 import { pageMetadata } from "@/lib/seo";
 
@@ -84,7 +84,11 @@ export default async function CollectionPage({
           <h2 className="font-serif text-2xl sm:text-3xl text-ink">
             Craftsmanship Detail
           </h2>
-          <Lightbox images={galleryImages} />
+          <CollectionGallery
+            slug={collection.slug}
+            collectionName={collection.name}
+            placeholders={galleryImages}
+          />
         </Container>
       </section>
     </>

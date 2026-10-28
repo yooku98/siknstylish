@@ -20,6 +20,7 @@ import {
 } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { collections } from "@/lib/collections";
+import { resizeImage } from "@/lib/resizeImage";
 
 const inputClasses =
   "border border-ink/20 bg-ivory px-4 py-3 text-sm focus:outline-none focus:border-gold";
@@ -47,15 +48,16 @@ function UploadForm() {
     const formData = new FormData(e.currentTarget);
     const collectionSlug = String(formData.get("collectionSlug"));
     const caption = String(formData.get("caption") ?? "");
-    const file = formData.get("image") as File;
+    const picked = formData.get("image") as File;
 
-    if (!file || file.size === 0) {
+    if (!picked || picked.size === 0) {
       setError("Please choose an image.");
       setStatus("error");
       return;
     }
 
     try {
+      const file = await resizeImage(picked);
       const storagePath = `portfolio/${collectionSlug}/${Date.now()}-${file.name}`;
       const storageRef = ref(storage, storagePath);
       await uploadBytes(storageRef, file);
@@ -141,6 +143,7 @@ export default function AdminPortfolio() {
   const [items, setItems] = useState<PortfolioItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -163,6 +166,7 @@ export default function AdminPortfolio() {
   }, []);
 
   const handleDelete = async (item: PortfolioItem) => {
+    setConfirmingId(null);
     setDeletingId(item.id);
     setDeleteError(null);
     try {
@@ -201,14 +205,34 @@ export default function AdminPortfolio() {
             {item.caption && (
               <p className="text-sm text-ink/70">{item.caption}</p>
             )}
-            <button
-              type="button"
-              onClick={() => handleDelete(item)}
-              disabled={deletingId === item.id}
-              className="text-xs text-red-700 uppercase tracking-wide self-start disabled:opacity-50"
-            >
-              {deletingId === item.id ? "Deleting..." : "Delete"}
-            </button>
+            {confirmingId === item.id ? (
+              <div className="flex items-center gap-3 text-xs uppercase tracking-wide">
+                <span className="text-ink/60 normal-case tracking-normal">Delete permanently?</span>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(item)}
+                  className="text-red-700 uppercase tracking-wide"
+                >
+                  Yes, delete
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingId(null)}
+                  className="text-ink/60 uppercase tracking-wide"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmingId(item.id)}
+                disabled={deletingId === item.id}
+                className="text-xs text-red-700 uppercase tracking-wide self-start disabled:opacity-50"
+              >
+                {deletingId === item.id ? "Deleting..." : "Delete"}
+              </button>
+            )}
           </div>
         ))}
       </div>

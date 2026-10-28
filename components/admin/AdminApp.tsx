@@ -4,19 +4,18 @@ import { useEffect, useState } from "react";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import Button from "@/components/ui/Button";
-import AdminOrders from "@/components/admin/AdminOrders";
+import AdminOrders, { type OrderPrefill } from "@/components/admin/AdminOrders";
 import AdminPortfolio from "@/components/admin/AdminPortfolio";
 import AdminBookings from "@/components/admin/AdminBookings";
 
 type Tab = "orders" | "bookings" | "portfolio";
-type Prefill = { email: string; collectionSlug: string } | null;
 
 export default function AdminApp() {
   const [user, setUser] = useState<User | null>(null);
   const [isStaff, setIsStaff] = useState(false);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("orders");
-  const [prefill, setPrefill] = useState<Prefill>(null);
+  const [prefill, setPrefill] = useState<OrderPrefill | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
@@ -111,7 +110,9 @@ export default function AdminApp() {
         </Button>
       </div>
 
-      {tab === "orders" && <AdminOrders prefill={prefill} />}
+      {tab === "orders" && (
+        <AdminOrders prefill={prefill} onPrefillUsed={() => setPrefill(null)} />
+      )}
       {tab === "bookings" && (
         <AdminBookings
           onCreateOrder={(params) => {

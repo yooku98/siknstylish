@@ -35,15 +35,27 @@ export default function BookingForm() {
     formData.append("access_key", accessKey);
     formData.append("subject", "New Consultation Booking Request — Sik n Stylish");
 
-    // Fire the Firestore write alongside the email, but never let it affect
-    // the visible success/error state -- the email stays the source of truth
-    // for whether the request "went through" from the client's point of
-    // view, this is just so staff also see it in /admin.
-    addDoc(collection(db, "bookingRequests"), {
-      ...bookingFields,
-      status: "new",
-      createdAt: serverTimestamp(),
-    }).catch(() => {});
+    // The email stays the source of truth for whether the request "went
+    // through" from the client's point of view; the Firestore copy is so
+    // staff also see it in /admin. If that copy fails (or hangs), say so in
+    // the email instead of silently dropping it from the admin panel.
+    const savedToAdmin = await Promise.race([
+      addDoc(collection(db, "bookingRequests"), {
+        ...bookingFields,
+        status: "new",
+        createdAt: serverTimestamp(),
+      }).then(
+        () => true,
+        () => false,
+      ),
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 5000)),
+    ]);
+    if (!savedToAdmin) {
+      formData.append(
+        "Admin panel",
+        "This request may not appear in the admin Bookings tab -- follow up from this email.",
+      );
+    }
 
     try {
       const res = await fetch("https://api.web3forms.com/submit", {
@@ -63,7 +75,7 @@ export default function BookingForm() {
       <div className="border border-gold bg-gold/10 p-8 text-center flex flex-col gap-2">
         <h3 className="font-serif text-xl text-ink">Request Received</h3>
         <p className="text-ink/70 text-sm">
-          Thank you — we'll be in touch shortly to confirm your consultation.
+          Thank you — we&apos;ll be in touch shortly to confirm your consultation.
         </p>
       </div>
     );
