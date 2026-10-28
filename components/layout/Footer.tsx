@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Container from "@/components/ui/Container";
 import { siteConfig } from "@/lib/seo";
-import { navLinks } from "@/components/layout/Header";
+import { navLinks } from "@/lib/navigation";
 
 export default function Footer() {
   const year = new Date().getFullYear();

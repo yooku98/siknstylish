@@ -4,15 +4,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Button from "@/components/ui/Button";
-import { navLinks } from "@/components/layout/Header";
+import { navGroups } from "@/lib/navigation";
 
 export default function MobileNav() {
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     if (open) {
@@ -24,7 +19,7 @@ export default function MobileNav() {
   }, [open]);
 
   const overlay = (
-    <div className="fixed inset-0 z-[100] bg-ivory flex flex-col items-center justify-center gap-8 px-6 overflow-y-auto">
+    <div className="fixed inset-0 z-[100] bg-ivory/90 backdrop-blur-xl overflow-y-auto">
       <button
         aria-label="Close menu"
         onClick={() => setOpen(false)}
@@ -32,28 +27,43 @@ export default function MobileNav() {
       >
         ×
       </button>
-      <nav className="flex flex-col items-center gap-6 font-sans text-lg uppercase tracking-wide">
-        {navLinks.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            onClick={() => setOpen(false)}
-            className="text-ink hover:text-gold transition-colors"
-          >
-            {link.label}
-          </Link>
+      <nav aria-label="Main" className="mx-auto flex max-w-md flex-col gap-10 px-6 pt-20 pb-12">
+        {navGroups.map((group) => (
+          <div key={group.id} className="flex flex-col gap-6">
+            <p className="font-serif text-2xl text-ink">{group.label}</p>
+            {group.columns.map((column) => (
+              <div key={column.heading} className="flex flex-col gap-3">
+                <p className="text-gold text-[0.7rem] uppercase tracking-[0.2em]">
+                  {column.heading}
+                </p>
+                <ul className="flex flex-col gap-3">
+                  {column.links.map((link) => (
+                    <li key={link.href}>
+                      <Link
+                        href={link.href}
+                        onClick={() => setOpen(false)}
+                        className="text-ink hover:text-gold transition-colors"
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         ))}
         <Link
-          href="/portal"
+          href="/contact"
           onClick={() => setOpen(false)}
-          className="text-ink/60 text-sm hover:text-gold transition-colors"
+          className="font-serif text-2xl text-ink hover:text-gold transition-colors"
         >
-          Client Login
+          Contact
         </Link>
+        <Button href="/book" variant="primary" onClick={() => setOpen(false)}>
+          Start Your Custom Order
+        </Button>
       </nav>
-      <Button href="/book" variant="primary" onClick={() => setOpen(false)}>
-        Start Your Custom Order
-      </Button>
     </div>
   );
 
@@ -73,7 +83,9 @@ export default function MobileNav() {
         />
       </button>
 
-      {open && mounted && createPortal(overlay, document.body)}
+      {/* `open` only becomes true from a tap, i.e. after hydration, so
+          document.body always exists here. */}
+      {open && createPortal(overlay, document.body)}
     </div>
   );
 }
