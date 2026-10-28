@@ -51,6 +51,34 @@ export type Order = {
   fabricApproved: boolean;
   inspirationNotes: string;
   inspirationPhotos: StoredImage[];
+  // Set alongside every depositPaid change; the rules require a matching
+  // payments entry to exist, so the deposit can't move without a log line.
+  lastPaymentId?: string;
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
+};
+
+export const paymentMethods = ["cash", "momo", "bank", "paystack", "other"] as const;
+
+export type PaymentMethod = (typeof paymentMethods)[number];
+
+export const paymentMethodLabels: Record<PaymentMethod, string> = {
+  cash: "Cash",
+  momo: "Mobile Money",
+  bank: "Bank Transfer",
+  paystack: "Online (Paystack)",
+  other: "Other",
+};
+
+// orders/{orderId}/payments/{paymentId}. Append-only: a mistake is fixed with
+// a negative correction entry, never an edit or delete.
+export type Payment = {
+  id: string;
+  amount: number;
+  method: PaymentMethod;
+  note: string;
+  source: "manual" | "paystack";
+  paidAt: Timestamp | null;
+  recordedByEmail?: string;
+  processedAt: Timestamp | null;
 };

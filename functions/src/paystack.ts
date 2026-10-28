@@ -114,9 +114,9 @@ async function verifyTransaction(
  * neither a webhook delivery nor a client call is assumed trustworthy on
  * its own, only Paystack's live API response is.
  *
- * Idempotent: keyed by reference as the payments/{reference} doc ID, so a
- * webhook delivery and a client-triggered verify racing each other (or
- * Paystack retrying a webhook) can't double-credit an order.
+ * Idempotent: keyed by reference as the orders/{orderId}/payments/{reference}
+ * doc ID, so a webhook delivery and a client-triggered verify racing each
+ * other (or Paystack retrying a webhook) can't double-credit an order.
  */
 export async function processVerifiedPayment(
   reference: string,
@@ -137,8 +137,10 @@ export async function processVerifiedPayment(
   }
 
   const db = getFirestore();
-  const paymentRef = db.collection("payments").doc(reference);
   const orderRef = db.collection("orders").doc(orderId);
+  // Same append-only log staff record manual payments into, so the admin
+  // panel and portal show one history.
+  const paymentRef = orderRef.collection("payments").doc(reference);
 
   await db.runTransaction(async (tx) => {
     const [paymentSnap, orderSnap] = await Promise.all([
@@ -169,6 +171,9 @@ export async function processVerifiedPayment(
       orderId,
       clientId,
       amount: amountPaid,
+      method: "paystack",
+      note: "",
+      source: "paystack",
       currency: data.currency,
       status: "success",
       paidAt: data.paid_at ? new Date(data.paid_at) : Timestamp.now(),
@@ -177,6 +182,7 @@ export async function processVerifiedPayment(
     tx.update(orderRef, {
       depositPaid,
       balanceDue,
+      lastPaymentId: reference,
       updatedAt: Timestamp.now(),
     });
   });

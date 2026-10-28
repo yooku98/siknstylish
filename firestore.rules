@@ -46,6 +46,41 @@ service cloud.firestore {
       data.createdAt == request.time;
     }
 
+    // A manual entry in orders/{orderId}/payments. The same write must move
+    // the order's depositPaid by exactly this amount (within half a pesewa,
+    // for float rounding), and the deposit can never go negative or past
+    // the total.
+    function isValidManualPayment(orderId) {
+      let data = request.resource.data;
+      let orderPath = /databases/$(database)/documents/orders/$(orderId);
+      let before = get(orderPath).data;
+      let after = getAfter(orderPath).data;
+      return data.keys().hasOnly([
+        'amount', 'method', 'note', 'source', 'paidAt',
+        'recordedBy', 'recordedByEmail', 'processedAt'
+      ]) &&
+      data.amount is number && data.amount != 0 &&
+      data.method in ['cash', 'momo', 'bank', 'other'] &&
+      data.note is string && data.note.size() <= 300 &&
+      (data.amount > 0 || data.note.size() > 0) &&
+      data.source == 'manual' &&
+      data.paidAt is timestamp && data.paidAt <= request.time + duration.value(1, 'd') &&
+      data.recordedBy == request.auth.uid &&
+      data.recordedByEmail is string &&
+      data.processedAt == request.time &&
+      after.lastPaymentId == request.resource.id &&
+      math.abs(after.depositPaid - (before.depositPaid + data.amount)) < 0.005 &&
+      after.depositPaid >= 0 &&
+      after.depositPaid <= after.totalAmount;
+    }
+    // Staff edits that touch depositPaid must land together with a new
+    // payments entry named by lastPaymentId -- no silent deposit changes.
+    function changesDepositWithLogEntry(orderId) {
+      let paymentPath = /databases/$(database)/documents/orders/$(orderId)/payments/$(request.resource.data.lastPaymentId);
+      return request.resource.data.lastPaymentId is string &&
+        !exists(paymentPath) && existsAfter(paymentPath);
+    }
+
     match /users/{uid} {
       allow read, write: if isOwner(uid) || isStaff();
       match /measurements/{docId} {
@@ -57,8 +92,11 @@ service cloud.firestore {
       allow read: if isStaff() ||
         (isSignedIn() && resource.data.clientId == request.auth.uid) ||
         canClaimOrder(resource.data);
-      allow create: if isStaff();
-      allow update: if isStaff() ||
+      allow create: if isStaff() && request.resource.data.depositPaid == 0 &&
+        !('lastPaymentId' in request.resource.data);
+      allow update: if (isStaff() &&
+         (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['depositPaid', 'lastPaymentId']) ||
+          changesDepositWithLogEntry(orderId))) ||
         (isSignedIn() && resource.data.clientId == request.auth.uid &&
          request.resource.data.diff(resource.data).affectedKeys()
            .hasOnly(['inspirationNotes', 'fabricApproved', 'sketchApproved', 'inspirationPhotos'])) ||
@@ -66,6 +104,15 @@ service cloud.firestore {
          request.resource.data.clientId == request.auth.uid &&
          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clientId', 'updatedAt']));
       allow delete: if isStaff();
+
+      // Append-only payment log. Paystack entries are written by Cloud
+      // Functions (Admin SDK, bypasses rules); staff add manual ones.
+      match /payments/{paymentId} {
+        allow read: if isStaff() ||
+          (isSignedIn() && get(/databases/$(database)/documents/orders/$(orderId)).data.clientId == request.auth.uid);
+        allow create: if isStaff() && isValidManualPayment(orderId);
+        allow update, delete: if false;
+      }
     }
 
     match /bookingRequests/{requestId} {
@@ -78,9 +125,5 @@ service cloud.firestore {
       allow write: if isStaff();
     }
 
-    match /payments/{paymentId} {
-      allow read: if isStaff() || (isSignedIn() && resource.data.clientId == request.auth.uid);
-      allow write: if false;
-    }
   }
 }

@@ -16,6 +16,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { getCollection } from "@/lib/collections";
 import { resizeImage } from "@/lib/resizeImage";
+import PaymentHistory, { usePayments } from "@/components/payments/PaymentHistory";
 import { Order, orderStatusLabels } from "@/lib/orders";
 
 function OrderCard({ order }: { order: Order }) {
@@ -95,6 +96,8 @@ function OrderCard({ order }: { order: Order }) {
           {order.balanceDue.toLocaleString()}
         </p>
       </div>
+
+      <ClientPayments order={order} />
 
       {order.sketches?.length > 0 && (
         <div className="flex flex-col gap-2">
@@ -193,6 +196,22 @@ function OrderCard({ order }: { order: Order }) {
       </div>
 
       {error && <p className="text-sm text-red-700">{error}</p>}
+    </div>
+  );
+}
+
+function ClientPayments({ order }: { order: Order }) {
+  const { payments, loading, error } = usePayments(order.id);
+  if (!loading && !error && payments.length === 0 && order.depositPaid === 0) return null;
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-xs text-ink/60 uppercase tracking-wide">Payments</p>
+      <PaymentHistory
+        payments={payments}
+        loading={loading}
+        error={error}
+        depositPaid={order.depositPaid}
+      />
     </div>
   );
 }

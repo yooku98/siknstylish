@@ -22,7 +22,7 @@ exercised end-to-end the way the rest of this project's features were.
 Both the callable verify and the webhook funnel through the same
 `processVerifiedPayment` in `src/paystack.ts`, which always re-confirms with
 Paystack's live `/transaction/verify` endpoint rather than trusting whatever
-triggered it, and is idempotent (keyed by `reference` as the `payments/{ref}`
+triggered it, and is idempotent (keyed by `reference` as the `orders/{orderId}/payments/{ref}`
 doc ID) so a race between the two can't double-credit an order.
 
 ## To activate once the account is approved
