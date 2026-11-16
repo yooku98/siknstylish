@@ -16,6 +16,13 @@ export const testimonials: Testimonial[] = [
     clientName: "Anna",
     occasion: "Custom Dress",
   },
+  {
+    id: "mawuena-matron-of-honour",
+    quote:
+      "Absolutely gorgeous work! My outfit was everything and more. The fit, finishing and attention to detail were simply impeccable. I wore it as a Matron of Honour at a wedding and received so many compliments! Thank you for bringing my vision to life so beautifully. Highly recommended!",
+    clientName: "Mawuena",
+    occasion: "Matron of Honour",
+  },
 ];
 
 // One quote reads as a featured pull-quote; more fill a grid.
